@@ -1,0 +1,26 @@
+.gitignore
+  s_f70d60f29542ec::t_f8c2cc79dd5932 1
+python-basics/.gitignore
+  s_f70d60f29542ec::t_f8c2cc79dd5932 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e7d7a84b5eb4525db8caea5250d874eb5d3b757c",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_f70d60f29542ec": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a29a-1813-7450-97e7-86e7affa18b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
