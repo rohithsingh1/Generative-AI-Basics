@@ -1,0 +1,28 @@
+python-basics/files/example.txt
+  s_5d0c3faea9b59f::t_fd5c4f8e0ab288 2-5
+  s_5d0c3faea9b59f::t_bf532359e3fe23 1
+  s_5d0c3faea9b59f::t_4ce4521a656782 6-7
+python-basics/file_operation_pythonBasics.py
+  h_66f393e93fb8bf 1-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3f5816f4c99a9f6ef40a8bdf5b668eebd9be098e",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_5d0c3faea9b59f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0b99d-329b-7f80-9b5a-ca076bb463bd",
+        "model": "gpt-5.5"
+      },
+      "human_author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
