@@ -1,0 +1,24 @@
+python-basics/filter_functions_pythonBasics.py
+  h_66f393e93fb8bf 1-44
+python-basics/import_lib_packages__pythonBasics.py
+  h_66f393e93fb8bf 1-22
+python-basics/custom__packages/maths.py
+  h_66f393e93fb8bf 1-5
+python-basics/custom__packages/subPackage/mult.py
+  h_66f393e93fb8bf 1-3
+python-basics/functions__pythonBasics.py
+  h_66f393e93fb8bf 1-217
+python-basics/requirements.txt
+  h_66f393e93fb8bf 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "114411046534708c394af0f49fa6a9edfdea0bf5",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
