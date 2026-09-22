@@ -72,7 +72,37 @@ print('====================Reading content from source file and writing to desti
 Todo
 Read a file and count no of lines , words , characters
 '''
+import os
+print('====================Read a file and count no of lines , words , characters===================')
 
+file_path = './files/example.txt'
+if os.path.exists(file_path):
+    with open(file_path,"r") as file:
+        fileContent = file.readlines()
+        no_of_lines = len(fileContent)
+        print(f"No of lines in a file : {no_of_lines}")
+        no_of_words = 0
+        no_of_characters = 0
+        for line in fileContent:
+            stripedLine = line.strip()
+            wordsList = stripedLine.split(sep=" ")
+            '''
+            calculating the no of words in each line
+            '''
+            no_of_words = no_of_words + len(wordsList)
+            print(f"wordsList : {wordsList}")
+            '''
+            calculating the all characters in each line
+            '''
+            for word in wordsList:
+                no_of_characters = no_of_characters + len(word)
+
+        print(f"no of words in a file : {no_of_words}")
+        print(f"no of characters in a file : {no_of_characters}")
+else:
+    print("file path doesn't exist")
+
+print('====================Read a file and count no of lines , words , characters===================')
 
 
 
@@ -81,7 +111,6 @@ create new Directory
 '''
 print('====================create new Directory=============================')
 
-import os
 directory_path = './files/packages'
 # os.mkdir(directory_path)
 print(f"Directory '{directory_path} created'")
