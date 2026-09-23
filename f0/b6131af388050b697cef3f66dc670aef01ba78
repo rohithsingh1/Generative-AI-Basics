@@ -1,0 +1,31 @@
+Tokenization_Basics/Basic_Example_1/basic_example_1.py
+  h_66f393e93fb8bf 1-26,28-59
+  s_5d0c3faea9b59f::t_a1c79b867afa69 27
+requirements.txt
+  h_66f393e93fb8bf 4
+.gitignore
+  h_66f393e93fb8bf 2
+Tokenization_Basics/Text_preprossing_steming_nltk/Stemming_text_preprocessing.py
+  h_66f393e93fb8bf 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f0b6131af388050b697cef3f66dc670aef01ba78",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_5d0c3faea9b59f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0b99d-329b-7f80-9b5a-ca076bb463bd",
+        "model": "gpt-5.5"
+      },
+      "human_author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
