@@ -54,3 +54,7 @@ print(porterStemmerObj.stem("fairly") , porterStemmerObj.stem("sportingly"),port
 print(snowballStemmerObj.stem("fairly"),snowballStemmerObj.stem("sportingly"),snowballStemmerObj.stem('goes'))
 
 print("==============================SnowballStemmer ===============\n")
+
+'''
+SnowballStemmer is better that porterStemmer
+'''
