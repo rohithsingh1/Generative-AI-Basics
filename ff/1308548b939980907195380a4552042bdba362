@@ -1,0 +1,31 @@
+requirements.txt
+  h_66f393e93fb8bf 5
+vectorization_basics/1_Bag_of_words_using_nltk/bag_of_words_nltk.py
+  s_d5d24061c6cc55::t_93bdf78d843d49 60,62-63
+  s_d5d24061c6cc55::t_a832f4ffd52488 52-54,57
+  s_d5d24061c6cc55::t_d741b05402f27b 27,51,55-56
+  h_66f393e93fb8bf 1-26,28-50,58-59,61
+data/shorterSMSSpamCollection.csv
+  h_66f393e93fb8bf 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ff1308548b939980907195380a4552042bdba362",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_d5d24061c6cc55": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b71302ee-daf7-4c52-b26b-9e55d094b10a",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
