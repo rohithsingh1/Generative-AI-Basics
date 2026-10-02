@@ -1,0 +1,207 @@
+Bag of Words (BoW) explained with new examples
+
+The idea in one line
+
+A computer can't read words, only numbers. Bag of Words turns each sentence into a list of numbers by counting how many times each word appears.
+
+It's called a "bag" because you throw all the words of a sentence into a bag and shake it: you keep which words appear and how many times, but you lose the order.
+
+"cat chased dog dog"   →   🛍️  { cat:1, chased:1, dog:2 }
+
+The example
+
+Imagine these 3 sentences, already cleaned (lowercased, stopwords like "the" and "on" removed, as in your script):
+
+S1 → "cat sat mat"          (from: The cat sat on the mat)
+S2 → "dog sat log"          (from: The dog sat on the log)
+S3 → "cat chased dog dog"   (from: The cat chased the dog, the dog!)
+
+Step 1: build the vocabulary
+
+Collect every unique word across all sentences and sort them A→Z. Each word gets a column number:
+
+┌──────────┬─────┬────────┬─────┬─────┬─────┬─────┐
+│ Column # │  0  │   1    │  2  │  3  │  4  │  5  │
+├──────────┼─────┼────────┼─────┼─────┼─────┼─────┤
+│ Word     │ cat │ chased │ dog │ log │ mat │ sat │
+└──────────┴─────┴────────┴─────┴─────┴─────┴─────┘
+
+This is exactly what sklearn's vocabulary_ shows, and it's what confused you earlier:
+
+{'cat': 0, 'sat': 5, 'mat': 4, 'dog': 2, 'log': 3, 'chased': 1}
+#   ↑ these are COLUMN NUMBERS, not counts
+
+With 6 unique words, every sentence becomes a list of 6 numbers, however long or short the sentence is.
+
+Step 2: count each word in each sentence
+
+For each sentence, go column by column and ask: "how many times does this word appear here?"
+
+S1 = "cat sat mat"
+
+┌─────┬────────┬─────┬─────┬─────┬─────┐
+│ cat │ chased │ dog │ log │ mat │ sat │
+├─────┼────────┼─────┼─────┼─────┼─────┤
+│  1  │   0    │  0  │  0  │  1  │  1  │
+└─────┴────────┴─────┴─────┴─────┴─────┘
+
+S2 = "dog sat log"
+
+┌─────┬────────┬─────┬─────┬─────┬─────┐
+│ cat │ chased │ dog │ log │ mat │ sat │
+├─────┼────────┼─────┼─────┼─────┼─────┤
+│  0  │   0    │  1  │  1  │  0  │  1  │
+└─────┴────────┴─────┴─────┴─────┴─────┘
+
+S3 = "cat chased dog dog"
+
+┌─────┬────────┬─────┬─────┬─────┬─────┐
+│ cat │ chased │ dog │ log │ mat │ sat │
+├─────┼────────┼─────┼─────┼─────┼─────┤
+│  1  │   1    │  2  │  0  │  0  │  0  │
+└─────┴────────┴─────┴─────┴─────┴─────┘
+
+dog appears twice in S3, so its count is 2.
+
+Step 3: stack them into the feature matrix
+
+            cat  chased  dog  log  mat  sat
+S1   →   [   1     0      0    0    1    1  ]
+S2   →   [   0     0      1    1    0    1  ]
+S3   →   [   1     1      2    0    0    0  ]
+
+This matrix is x in your code. sklearn's actual output is the same:
+
+[[1 0 0 0 1 1]
+ [0 0 1 1 0 1]
+ [1 1 2 0 0 0]]
+
+- Each row is one sentence, turned into numbers.
+- Each column is one word.
+- Each cell is how many times that word appears in that sentence.
+
+Adding up each column gives the total word counts, which is the frequency_of_words line in your script:
+
+cat=2  chased=1  dog=3  log=1  mat=1  sat=2
+
+Two types of BoW
+
+1. Count BoW (the default)
+
+This counts how many times each word appears, as shown above. S3 gets dog = 2.
+
+CountVectorizer()
+
+2. Binary BoW
+
+This only records whether a word is present (1) or absent (0). The count doesn't matter.
+
+CountVectorizer(binary=True)
+
+            cat  chased  dog  log  mat  sat
+S1   →   [   1     0      0    0    1    1  ]
+S2   →   [   0     0      1    1    0    1  ]
+S3   →   [   1     1      1    0    0    0  ]   ← dog is now 1, not 2
+
+When to use which?
+- Binary: when presence matters more than repetition. Seeing "free" once in an SMS is already a spam signal.
+- Count: when repetition means something. "Great great great movie" is more positive than "great movie".
+
+max_features: keep only the most common words
+
+Real data has thousands of unique words. Your 5,572 SMS messages have about 7,000. max_features=N keeps only the N most frequent words and drops the rest.
+
+With max_features=3, the totals were dog=3, cat=2, sat=2, so those three are kept:
+
+CountVectorizer(max_features=3)
+
+            cat  dog  sat
+S1   →   [   1    0    1  ]
+S2   →   [   0    1    1  ]
+S3   →   [   1    2    0  ]
+
+chased, log and mat appeared only once each, so they were dropped. This keeps the matrix small and ignores rare words.
+
+Using the vocabulary on a new sentence
+
+After fit_transform has learned the vocabulary, you can turn new sentences into numbers with transform:
+
+countVectorizerObj.transform(["cat ate fish"]).toarray()
+# [[1 0 0 0 0 0]]
+
+Only cat is counted. ate and fish are silently ignored, because they weren't in the vocabulary when the model learned it. This is called the out-of-vocabulary (OOV) problem.
+
+A real-world example: spam vs ham
+
+This is what your SMS dataset does:
+
+ham  → "call me later"
+spam → "free prize call now"
+spam → "win free free prize"
+
+┌──────┬──────┬──────┬───────┬─────┬─────┬───────┬─────┐
+│      │ call │ free │ later │ me  │ now │ prize │ win │
+├──────┼──────┼──────┼───────┼─────┼─────┼───────┼─────┤
+│ ham  │  1   │  0   │   1   │  1  │  0  │   0   │  0  │
+├──────┼──────┼──────┼───────┼─────┼─────┼───────┼─────┤
+│ spam │  1   │  1   │   0   │  0  │  1  │   1   │  0  │
+├──────┼──────┼──────┼───────┼─────┼─────┼───────┼─────┤
+│ spam │  0   │  2   │   0   │  0  │  0  │   1   │  1  │
+└──────┴──────┴──────┴───────┴─────┴─────┴───────┴─────┘
+
+A machine learning model (like Naive Bayes) looks at thousands of rows like these and learns patterns such as "high numbers in free and prize usually mean spam." That is the whole purpose of BoW: turning text into numbers a model can learn from.
+
+Pros and cons
+
+✅ Advantages
+
+1. Simple and fast. It's just counting.
+2. Fixed size. Every sentence becomes the same length (the vocabulary size), which ML models need.
+3. Works well for simple tasks like spam detection and topic classification.
+
+❌ Disadvantages
+
+1. Word order is lost.
+
+transform(["dog chased cat"])  →  [1 1 1 0 0 0]
+transform(["cat chased dog"])  →  [1 1 1 0 0 0]   ← identical!
+
+Who chased whom? BoW can't tell. N-grams (previous answer) partly fix this.
+
+2. Meaning is lost. happy and joyful get separate, unrelated columns, even though they mean the same thing. Word embeddings (Word2Vec, coming later in the course) fix this.
+
+3. Sparse matrices. With 7,000 words in the vocabulary, a 5-word SMS has 6,995 zeros and 5 non-zeros. That wastes memory, which is why sklearn stores x as a sparse matrix and you need .toarray() to see it.
+
+4. Every word is treated as equally important. A word like sat that appears in many sentences gets the same weight as a rare, meaningful word. TF-IDF (likely your next lesson) fixes this by giving common words less weight.
+
+5. New words are ignored (the out-of-vocabulary problem shown above).
+
+Summary
+
+Sentences ──► clean (lowercase, remove stopwords, lemmatize)
+          ──► build vocabulary (unique words, sorted A→Z = column numbers)
+          ──► count each word per sentence
+          ──► feature matrix x (rows = sentences, columns = words)
+          ──► feed into an ML model
+
+┌────────────────────────────────────┬─────────────────────────────────────────────────────┐
+│                Code                │                    What it does                     │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ CountVectorizer()                  │ count BoW                                           │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ CountVectorizer(binary=True)       │ binary BoW (0/1)                                    │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ CountVectorizer(max_features=N)    │ keep only the top N words                           │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ CountVectorizer(ngram_range=(1,2)) │ also count word pairs                               │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ .fit_transform(docs)               │ learn the vocabulary and convert training sentences │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ .transform(new_docs)               │ convert new sentences using the learned vocabulary  │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ .vocabulary_                       │ word → column number                                │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ .get_feature_names_out()           │ column names in order                               │
+├────────────────────────────────────┼─────────────────────────────────────────────────────┤
+│ x.toarray()                        │ show the sparse matrix as a normal table            │
+└────────────────────────────────────┴─────────────────────────────────────────────────────┘

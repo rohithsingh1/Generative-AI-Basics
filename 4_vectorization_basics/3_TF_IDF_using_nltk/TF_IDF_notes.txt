@@ -1,0 +1,262 @@
+TF-IDF explained with new examples
+
+Why do we need TF-IDF?
+
+In Bag of Words, every word counts the same. That's a problem.
+
+Imagine you're reading reviews from a pizza shop. Almost every review contains the word pizza. Does pizza tell you anything about a particular review? No, because it's in all of them. Words like spicy or cold are rare, and they tell you what makes this review different.
+
+TF-IDF gives each word a score based on how important it is:
+- A word that appears often in this sentence gets a higher score (TF).
+- A word that appears in many sentences gets a lower score (IDF).
+
+TF-IDF stands for Term Frequency × Inverse Document Frequency. "Term" means word, and "document" means sentence.
+
+The example
+
+S1 → "pizza hot tasty"
+S2 → "pizza cold"
+S3 → "pizza hot hot spicy"
+
+Vocabulary, sorted A→Z: cold, hot, pizza, spicy, tasty
+
+First, look at which sentences each word appears in:
+
+┌───────┬────────┬────────┬────────┬─────────────────────────┐
+│ Word  │ In S1? │ In S2? │ In S3? │ Sentences containing it │
+├───────┼────────┼────────┼────────┼─────────────────────────┤
+│ cold  │        │   ✓    │        │            1            │
+├───────┼────────┼────────┼────────┼─────────────────────────┤
+│ hot   │   ✓    │        │   ✓    │            2            │
+├───────┼────────┼────────┼────────┼─────────────────────────┤
+│ pizza │   ✓    │   ✓    │   ✓    │         3 (all)         │
+├───────┼────────┼────────┼────────┼─────────────────────────┤
+│ spicy │        │        │   ✓    │            1            │
+├───────┼────────┼────────┼────────┼─────────────────────────┤
+│ tasty │   ✓    │        │        │            1            │
+└───────┴────────┴────────┴────────┴─────────────────────────┘
+
+pizza is everywhere, so it should end up with the lowest importance.
+
+Part 1: TF (Term Frequency)
+
+"How often does this word appear in this sentence?"
+
+TF = (times the word appears in the sentence) / (total words in the sentence)
+
+Dividing by sentence length makes it fair: one "hot" in a 3-word sentence matters more than one "hot" in a 100-word sentence.
+
+S1 = "pizza hot tasty" (3 words)
+- hot = 1/3 = 0.333
+- pizza = 1/3 = 0.333
+- tasty = 1/3 = 0.333
+
+S2 = "pizza cold" (2 words)
+- cold = 1/2 = 0.5
+- pizza = 1/2 = 0.5
+
+S3 = "pizza hot hot spicy" (4 words)
+- hot = 2/4 = 0.5 (it appears twice)
+- pizza = 1/4 = 0.25
+- spicy = 1/4 = 0.25
+
+TF table:
+
+┌─────┬──────┬───────┬───────┬───────┬───────┐
+│     │ cold │  hot  │ pizza │ spicy │ tasty │
+├─────┼──────┼───────┼───────┼───────┼───────┤
+│ S1  │  0   │ 0.333 │ 0.333 │   0   │ 0.333 │
+├─────┼──────┼───────┼───────┼───────┼───────┤
+│ S2  │ 0.5  │   0   │  0.5  │   0   │   0   │
+├─────┼──────┼───────┼───────┼───────┼───────┤
+│ S3  │  0   │  0.5  │ 0.25  │ 0.25  │   0   │
+└─────┴──────┴───────┴───────┴───────┴───────┘
+
+Part 2: IDF (Inverse Document Frequency)
+
+"How rare is this word across all sentences?"
+
+IDF = log( total number of sentences / number of sentences containing the word )
+
+Here, the total number of sentences is N = 3.
+
+┌───────┬─────────────────────┬───────┬───────────────────────────────┐
+│ Word  │     Calculation     │  IDF  │            Meaning            │
+├───────┼─────────────────────┼───────┼───────────────────────────────┤
+│ cold  │ log(3 / 1)          │ 1.099 │ rare, so important            │
+├───────┼─────────────────────┼───────┼───────────────────────────────┤
+│ hot   │ log(3 / 2)          │ 0.405 │ somewhat common               │
+├───────┼─────────────────────┼───────┼───────────────────────────────┤
+│ pizza │ log(3 / 3) = log(1) │   0   │ in every sentence, so useless │
+├───────┼─────────────────────┼───────┼───────────────────────────────┤
+│ spicy │ log(3 / 1)          │ 1.099 │ rare, so important            │
+├───────┼─────────────────────┼───────┼───────────────────────────────┤
+│ tasty │ log(3 / 1)          │ 1.099 │ rare, so important            │
+└───────┴─────────────────────┴───────┴───────────────────────────────┘
+
+Why log? Without it, a word appearing in 1 of 10,000 sentences would get IDF = 10,000, a huge number that would drown out everything else. log shrinks big numbers so the scores stay balanced.
+
+The key point: a word in every sentence gets log(1) = 0, so it's wiped out automatically.
+
+Part 3: TF × IDF
+
+Multiply each word's TF by its IDF:
+
+S1 = "pizza hot tasty"
+- hot = 0.333 × 0.405 = 0.135
+- pizza = 0.333 × 0 = 0
+- tasty = 0.333 × 1.099 = 0.366
+
+S2 = "pizza cold"
+- cold = 0.5 × 1.099 = 0.549
+- pizza = 0.5 × 0 = 0
+
+S3 = "pizza hot hot spicy"
+- hot = 0.5 × 0.405 = 0.203
+- pizza = 0.25 × 0 = 0
+- spicy = 0.25 × 1.099 = 0.275
+
+Final TF-IDF table:
+
+┌─────┬───────┬───────┬───────┬───────┬───────┐
+│     │ cold  │  hot  │ pizza │ spicy │ tasty │
+├─────┼───────┼───────┼───────┼───────┼───────┤
+│ S1  │   0   │ 0.135 │   0   │   0   │ 0.366 │
+├─────┼───────┼───────┼───────┼───────┼───────┤
+│ S2  │ 0.549 │   0   │   0   │   0   │   0   │
+├─────┼───────┼───────┼───────┼───────┼───────┤
+│ S3  │   0   │ 0.203 │   0   │ 0.275 │   0   │
+└─────┴───────┴───────┴───────┴───────┴───────┘
+
+What the numbers tell us
+
+- pizza is 0 everywhere. It appears in every review, so it doesn't help tell reviews apart.
+- S1's most important word is tasty (0.366), which is what makes S1 unique.
+- S2's most important word is cold (0.549), and it scores highest because S2 is short.
+- In S3, hot appears twice and has the higher TF, but spicy still wins (0.275 vs 0.203) because spicy is rarer.
+
+BoW vs TF-IDF side by side (S1)
+
+┌────────┬──────┬───────┬───────┬───────┬───────┐
+│        │ cold │  hot  │ pizza │ spicy │ tasty │
+├────────┼──────┼───────┼───────┼───────┼───────┤
+│ BoW    │  0   │   1   │   1   │   0   │   1   │
+├────────┼──────┼───────┼───────┼───────┼───────┤
+│ TF-IDF │  0   │ 0.135 │   0   │   0   │ 0.366 │
+└────────┴──────┴───────┴───────┴───────┴───────┘
+
+BoW says "hot, pizza and tasty are equally important." TF-IDF says "tasty matters most, hot a little, pizza not at all." That's the whole improvement.
+
+Part 4: what sklearn actually does (the numbers will differ)
+
+When you run TfidfVectorizer you won't get the numbers above, and that's expected. sklearn makes 3 changes to the textbook formula:
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+tfidf = TfidfVectorizer()
+x = tfidf.fit_transform(docs)
+
+Change 1: TF is the raw count
+
+sklearn doesn't divide by sentence length, so hot in S3 has TF = 2, not 0.5.
+
+Change 2: a "smoothed" IDF
+
+IDF = ln( (1 + N) / (1 + sentences containing word) ) + 1
+
+- The +1 inside avoids dividing by zero, in case a word appears in no sentences.
+- The +1 at the end means common words are never completely wiped out; their minimum score is 1, not 0.
+
+tfidf.idf_ gives:
+
+┌───────┬───────┬──────────────────┬───────┬───────┐
+│ cold  │  hot  │      pizza       │ spicy │ tasty │
+├───────┼───────┼──────────────────┼───────┼───────┤
+│ 1.693 │ 1.288 │ 1.0 (the lowest) │ 1.693 │ 1.693 │
+└───────┴───────┴──────────────────┴───────┴───────┘
+
+pizza is still the lowest, but it's 1 instead of 0.
+
+Change 3: each row is normalized (L2)
+
+After multiplying TF × IDF, sklearn scales each row so its length is 1. Long and short sentences then become fairly comparable.
+
+For S1:
+
+raw scores:  hot = 1 × 1.288 = 1.288
+             pizza = 1 × 1.0   = 1.0
+             tasty = 1 × 1.693 = 1.693
+
+length = √(1.288² + 1.0² + 1.693²) = √5.525 = 2.350
+
+normalized:  hot = 1.288 / 2.350 = 0.548
+             pizza = 1.0 / 2.350 = 0.425
+             tasty = 1.693 / 2.350 = 0.720
+
+sklearn's actual output
+
+          cold    hot   pizza  spicy  tasty
+S1  →  [ 0.     0.548  0.425  0.     0.72  ]
+S2  →  [ 0.861  0.     0.509  0.     0.    ]
+S3  →  [ 0.     0.795  0.309  0.523  0.    ]
+
+The numbers are different, but the ranking is the same idea: pizza gets the lowest score in each sentence, and the rare words get the highest.
+
+(In S3, hot beats spicy here because sklearn uses the raw count 2 for hot, which is a bigger boost than the textbook's 2/4.)
+
+Real-world example: spam detection
+
+ham  → "call me later"
+spam → "call now win prize"
+spam → "call now free prize"
+ham  → "call you tomorrow"
+
+- call is in all 4 messages → low score (useless)
+- now and prize are in the 2 spams → medium score
+- win and free are each in 1 spam → high score (strong spam signals)
+- later and tomorrow are each in 1 ham → high score (strong ham signals)
+
+A model trained on TF-IDF automatically focuses on the words that separate spam from ham, not the words that are everywhere.
+
+Pros and cons
+
+✅ Advantages over BoW
+
+1. Common words get less weight automatically, even ones your stopword list missed (like pizza here, or call in SMS).
+2. Rare, meaningful words stand out.
+3. It usually gives better accuracy than BoW for classification.
+
+❌ Still has these problems (same as BoW)
+
+1. Word order is lost. "dog bites man" and "man bites dog" get the same vector. Adding ngram_range=(1,2) helps.
+2. Meaning is lost. tasty and delicious are unrelated columns. Word2Vec (next in the course) fixes this.
+3. Sparse matrices. It still produces a huge matrix with mostly zeros.
+4. New words are ignored. Words not seen during fit are dropped.
+
+Summary
+
+TF    = how often the word appears in THIS sentence     → high when repeated here
+IDF   = how rare the word is across ALL sentences       → high when rare
+TF-IDF = TF × IDF                                       → high when frequent here but rare elsewhere
+
+┌────────────────────────────────────┬──────┬──────┬─────────┐
+│             Word type              │  TF  │ IDF  │ TF-IDF  │
+├────────────────────────────────────┼──────┼──────┼─────────┤
+│ Appears in every sentence (pizza)  │ any  │ low  │   low   │
+├────────────────────────────────────┼──────┼──────┼─────────┤
+│ Rare and repeated in this sentence │ high │ high │ highest │
+├────────────────────────────────────┼──────┼──────┼─────────┤
+│ Rare but appears once              │ low  │ high │ medium  │
+└────────────────────────────────────┴──────┴──────┴─────────┘
+
+In code:
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+tfidf = TfidfVectorizer(max_features=100, ngram_range=(1, 2))
+x = tfidf.fit_transform(modified_sentenses)
+
+print(tfidf.get_feature_names_out())   # the words (columns)
+print(tfidf.idf_)                      # IDF of each word (lower = more common)
+print(x.toarray())                     # the TF-IDF matrix
+
+It's a drop-in replacement for CountVectorizer: same methods (fit_transform, transform, max_features, ngram_range), but the output has importance scores instead of counts.

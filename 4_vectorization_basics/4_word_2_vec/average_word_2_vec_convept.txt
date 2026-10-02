@@ -1,0 +1,266 @@
+Average Word2Vec explained with simple examples
+
+The problem it solves
+
+Word2Vec gives you one vector per word. But for spam detection you need to classify a whole sentence, so you need one vector per sentence.
+
+An ML model (like Random Forest or Logistic Regression) also needs every input to have the same size. Sentences don't:
+
+"win free prize"   → 3 words → 3 vectors
+"call later"       → 2 words → 2 vectors
+
+If each word is 3 numbers, the first sentence is 3×3 = 9 numbers and the second is 2×3 = 6 numbers. The model can't accept inputs of different sizes.
+
+Average Word2Vec fixes this: take all the word vectors in a sentence and average them into one vector. However long the sentence is, the result always has the same size as one word vector.
+
+sentence → word vectors → AVERAGE → 1 sentence vector (fixed size)
+
+Step 1: get a vector for each word (from Word2Vec)
+
+Suppose Word2Vec has been trained (vector_size=3) and gave us these vectors. They're made-up, simple numbers so the math is easy to follow:
+
+┌──────────┬─────────────────┐
+│   Word   │     Vector      │
+├──────────┼─────────────────┤
+│ free     │ [0.9, 0.1, 0.2] │
+├──────────┼─────────────────┤
+│ prize    │ [0.8, 0.2, 0.1] │
+├──────────┼─────────────────┤
+│ win      │ [0.7, 0.1, 0.3] │
+├──────────┼─────────────────┤
+│ call     │ [0.3, 0.5, 0.4] │
+├──────────┼─────────────────┤
+│ later    │ [0.1, 0.8, 0.6] │
+├──────────┼─────────────────┤
+│ tomorrow │ [0.2, 0.7, 0.6] │
+└──────────┴─────────────────┘
+
+Notice that the spammy words (free, prize, win) all have a big 1st number, while the normal words (later, tomorrow) have big 2nd and 3rd numbers. Word2Vec learned this because these words appear in similar contexts.
+
+Step 2: our sentences (already cleaned)
+
+┌─────┬─────────────────┬───────┐
+│  #  │     Message     │ Label │
+├─────┼─────────────────┼───────┤
+│ S1  │ win free prize  │ spam  │
+├─────┼─────────────────┼───────┤
+│ S2  │ call later      │ ham   │
+├─────┼─────────────────┼───────┤
+│ S3  │ call free prize │ spam  │
+├─────┼─────────────────┼───────┤
+│ S4  │ call tomorrow   │ ham   │
+└─────┴─────────────────┴───────┘
+
+Step 3: average the word vectors in each sentence
+
+To average, add the vectors position by position, then divide by the number of words.
+
+S1 = "win free prize" (3 words)
+
+win    = [0.7, 0.1, 0.3]
+free   = [0.9, 0.1, 0.2]
+prize  = [0.8, 0.2, 0.1]
+         ───────────────
+sum    = [2.4, 0.4, 0.6]
+
+average = sum / 3 = [0.80, 0.13, 0.20]
+
+Position by position:
+- 1st number: (0.7 + 0.9 + 0.8) / 3 = 2.4 / 3 = 0.80
+- 2nd number: (0.1 + 0.1 + 0.2) / 3 = 0.4 / 3 = 0.13
+- 3rd number: (0.3 + 0.2 + 0.1) / 3 = 0.6 / 3 = 0.20
+
+S2 = "call later" (2 words)
+
+call   = [0.3, 0.5, 0.4]
+later  = [0.1, 0.8, 0.6]
+         ───────────────
+sum    = [0.4, 1.3, 1.0]
+
+average = sum / 2 = [0.20, 0.65, 0.50]
+
+S3 = "call free prize" (3 words)
+
+call   = [0.3, 0.5, 0.4]
+free   = [0.9, 0.1, 0.2]
+prize  = [0.8, 0.2, 0.1]
+         ───────────────
+sum    = [2.0, 0.8, 0.7]
+
+average = sum / 3 = [0.67, 0.27, 0.23]
+
+S4 = "call tomorrow" (2 words)
+
+call     = [0.3, 0.5, 0.4]
+tomorrow = [0.2, 0.7, 0.6]
+           ───────────────
+sum      = [0.5, 1.2, 1.0]
+
+average = sum / 2 = [0.25, 0.60, 0.50]
+
+Step 4: the final feature matrix
+
+Every sentence is now exactly 3 numbers, whatever its length:
+
+┌─────┬─────────────────┬────────────────────┬───────┐
+│  #  │     Message     │  Sentence vector   │ Label │
+├─────┼─────────────────┼────────────────────┼───────┤
+│ S1  │ win free prize  │ [0.80, 0.13, 0.20] │ spam  │
+├─────┼─────────────────┼────────────────────┼───────┤
+│ S2  │ call later      │ [0.20, 0.65, 0.50] │ ham   │
+├─────┼─────────────────┼────────────────────┼───────┤
+│ S3  │ call free prize │ [0.67, 0.27, 0.23] │ spam  │
+├─────┼─────────────────┼────────────────────┼───────┤
+│ S4  │ call tomorrow   │ [0.25, 0.60, 0.50] │ ham   │
+└─────┴─────────────────┴────────────────────┴───────┘
+
+X = [[0.80, 0.13, 0.20],      y = [spam,
+     [0.20, 0.65, 0.50],           ham,
+     [0.67, 0.27, 0.23],           spam,
+     [0.25, 0.60, 0.50]]           ham]
+
+You can already see the pattern:
+- Spam messages have a high 1st number (0.80, 0.67).
+- Ham messages have high 2nd and 3rd numbers.
+
+Even S3, which contains the normal word call, still leans spammy because free and prize pull the average toward spam.
+
+Step 5: train a model and predict
+
+X (sentence vectors) + y (labels) → train classifier (e.g. RandomForest)
+
+Now a new message arrives: "free win"
+
+free = [0.9, 0.1, 0.2]
+win  = [0.7, 0.1, 0.3]
+       ───────────────
+avg  = [0.80, 0.10, 0.25]
+
+This vector looks very much like S1 [0.80, 0.13, 0.20], so the model predicts spam ✅.
+
+That's what the lecture means by "with respect to this particular vector, I will be having my output": one averaged vector goes in, one prediction comes out.
+
+Why averaging works
+
+Think of each word vector as pointing in a direction of meaning. Averaging gives the sentence's overall direction:
+
+     spam-ish ◄─────────────────────► normal-ish
+       free  prize  win          call      later  tomorrow
+
+"win free prize"   → all point left           → average points LEFT  (spam)
+"call later"       → all point right          → average points RIGHT (ham)
+"call free prize"  → 2 left, 1 middle         → average points mostly LEFT
+
+Comparison with BoW and TF-IDF
+
+Take the same SMS dataset with about 7,000 unique words:
+
+┌───────────────────────────────────────┬────────────────────────────────┬───────────────────────────────────────┐
+│                                       │          BoW / TF-IDF          │           Average Word2Vec            │
+├───────────────────────────────────────┼────────────────────────────────┼───────────────────────────────────────┤
+│ Vector size per sentence              │ 7,000 (vocabulary size)        │ 100 (vector_size)                     │
+├───────────────────────────────────────┼────────────────────────────────┼───────────────────────────────────────┤
+│ Mostly zeros?                         │ ✅ yes (sparse)                │ ❌ no (dense)                         │
+├───────────────────────────────────────┼────────────────────────────────┼───────────────────────────────────────┤
+│ Understands similar words?            │ ❌ prize and reward are        │ ✅ prize and reward have similar      │
+│                                       │ unrelated                      │ vectors                               │
+├───────────────────────────────────────┼────────────────────────────────┼───────────────────────────────────────┤
+│ Handles a new word with a similar     │ ❌                             │ ✅ if Word2Vec has seen it            │
+│ meaning                               │                                │                                       │
+└───────────────────────────────────────┴────────────────────────────────┴───────────────────────────────────────┘
+
+Example: suppose training data had "win a prize" and a new message says "win a reward."
+- BoW: reward is a different column, so the model has no clue.
+- Average Word2Vec: reward has a vector close to prize, so the sentence average is close too, and the model correctly says spam.
+
+Pros and cons
+
+✅ Advantages
+
+1. Fixed size. Any sentence becomes one vector of length vector_size.
+2. Small and dense. It uses 100 numbers instead of 7,000 mostly-zero numbers.
+3. Captures meaning. Similar words give similar sentence vectors.
+4. Simple. It's just an average.
+
+❌ Disadvantages
+
+1. Word order is lost. "dog bites man" and "man bites dog" have the same words, so they get the same average.
+
+2. Every word counts equally. In "the free prize", the has as much say as free. Removing stopwords helps, and so does a TF-IDF-weighted average, where important words count more.
+
+3. Long sentences get "diluted." In a 50-word message with one spammy word, that word's signal gets averaged away.
+
+4. Unknown words are skipped. Words Word2Vec never saw have no vector. If all words in a sentence are unknown, there's nothing to average (see the bug note below).
+
+Code (gensim)
+
+Install gensim first if needed (pip install gensim).
+
+import numpy as np
+from gensim.models import Word2Vec
+
+# 1. Tokenized, cleaned sentences
+corpus = [
+    ["win", "free", "prize"],
+    ["call", "later"],
+    ["call", "free", "prize"],
+    ["call", "tomorrow"],
+]
+
+# 2. Train Word2Vec → one vector per WORD
+model = Word2Vec(corpus, vector_size=100, window=5, min_count=1)
+
+# 3. Average Word2Vec → one vector per SENTENCE
+def avg_word2vec(words):
+    vectors = [model.wv[w] for w in words if w in model.wv.key_to_index]
+    if not vectors:                          # no known words in this sentence
+        return np.zeros(model.vector_size)   # return all zeros instead of NaN
+    return np.mean(vectors, axis=0)          # axis=0 → average position by position
+
+X = np.array([avg_word2vec(words) for words in corpus])
+print(X.shape)    # (4, 100) → 4 sentences, each 100 numbers
+
+What each part does
+
+┌───────────────────────────────┬───────────────────────────────────────────────────────────────────┐
+│             Code              │                              Meaning                              │
+├───────────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ model.wv[w]                   │ look up word w's vector                                           │
+├───────────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ if w in model.wv.key_to_index │ skip words Word2Vec doesn't know (otherwise it raises a KeyError) │
+├───────────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ np.mean(vectors, axis=0)      │ average the vectors position by position, as in Step 3            │
+├───────────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ np.zeros(...)                 │ fallback for a sentence with no known words                       │
+└───────────────────────────────┴───────────────────────────────────────────────────────────────────┘
+
+axis=0 works the same way as in your BoW code (x_array.sum(axis=0)), but it averages down the columns instead of adding.
+
+           pos1  pos2  pos3
+win      [ 0.7   0.1   0.3 ]
+free     [ 0.9   0.1   0.2 ]
+prize    [ 0.8   0.2   0.1 ]
+           ↓     ↓     ↓      mean(axis=0)
+         [ 0.80  0.13  0.20 ]
+
+Watch out for this common bug
+
+Many tutorials write it in one line:
+
+np.mean([model.wv[w] for w in words if w in model.wv.index_to_key], axis=0)
+
+If a message becomes empty after cleaning, or all its words were dropped by min_count, the list is empty and np.mean([]) returns nan with a warning. That nan will later crash your classifier. The if not vectors check in the code above prevents this.
+
+Also, w in model.wv.index_to_key searches a list one item at a time, which is slow for 5,572 messages. w in model.wv.key_to_index uses a dictionary and is instant.
+
+Summary
+
+1. Clean & tokenize each sentence         "win free prize" → [win, free, prize]
+2. Train Word2Vec                         each word → 100-number vector
+3. For each sentence:
+     look up each word's vector           3 vectors of size 100
+     average them (axis=0)                → 1 vector of size 100
+4. Stack all sentence vectors             X shape = (num_sentences, 100)
+5. Train a classifier on X and labels     → predict spam / ham
+
+Average Word2Vec = turning a sentence into one fixed-size vector by averaging its word vectors. It's the bridge between Word2Vec (word-level) and ML models (which need sentence-level, fixed-size input).

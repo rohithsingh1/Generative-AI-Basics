@@ -1,0 +1,493 @@
+Word Embeddings and Word2Vec explained step by step
+
+Part 1: The problem with BoW and TF-IDF
+
+With BoW and TF-IDF, every word is just a separate column:
+
+            happy  joyful  sad
+"happy"  →   [1      0      0]
+"joyful" →   [0      1      0]
+"sad"    →   [0      0      1]
+
+To the computer, happy is as different from joyful as it is from sad. It has no idea that happy and joyful mean almost the same thing. The vectors are also huge (one column per word, often 10,000+) and almost entirely zeros.
+
+What we want: each word as a short list of numbers that captures its meaning, so that similar words get similar numbers.
+
+Part 2: What is a word embedding?
+
+A word embedding is a short, dense list of numbers (a vector) that represents a word's meaning.
+
+A hand-made example
+
+Suppose we describe every word with 3 features:
+
+┌───────┬────────────┬────────┬─────────┐
+│ Word  │ Royalty 👑 │ Male ♂ │ Food 🍎 │
+├───────┼────────────┼────────┼─────────┤
+│ king  │    0.95    │  0.90  │  0.01   │
+├───────┼────────────┼────────┼─────────┤
+│ queen │    0.95    │  0.05  │  0.02   │
+├───────┼────────────┼────────┼─────────┤
+│ man   │    0.10    │  0.95  │  0.03   │
+├───────┼────────────┼────────┼─────────┤
+│ woman │    0.10    │  0.05  │  0.02   │
+├───────┼────────────┼────────┼─────────┤
+│ apple │    0.01    │  0.02  │  0.98   │
+└───────┴────────────┴────────┴─────────┘
+
+Now the numbers mean something:
+- king and queen are close: both have high royalty.
+- king and man are close: both have high male.
+- apple is far from all of them: only its food score is high.
+
+You can even do math with meaning:
+
+king − man + woman
+= [0.95, 0.90, 0.01] − [0.10, 0.95, 0.03] + [0.10, 0.05, 0.02]
+= [0.95, 0.00, 0.00]
+≈ queen [0.95, 0.05, 0.02]   ✅
+
+"Take king, remove maleness, add femaleness, and you get queen."
+
+BoW vs embedding
+
+┌─────────┬───────────────────────────┬──────────────────────────────────────┐
+│         │       BoW / TF-IDF        │            Word Embedding            │
+├─────────┼───────────────────────────┼──────────────────────────────────────┤
+│ Size    │ vocabulary size (10,000+) │ small (50–300)                       │
+├─────────┼───────────────────────────┼──────────────────────────────────────┤
+│ Values  │ mostly 0s (sparse)        │ all filled in (dense)                │
+├─────────┼───────────────────────────┼──────────────────────────────────────┤
+│ Meaning │ ❌ none                   │ ✅ similar words get similar vectors │
+└─────────┴───────────────────────────┴──────────────────────────────────────┘
+
+Part 3: Word2Vec's main idea
+
+▎ "You can tell what a word means by the words around it."
+
+Look at these sentences:
+
+I drank a cup of  ___  this morning.
+I drank a cup of  ___  this morning.
+
+Whether the blank is coffee or tea, the surrounding words are the same. Word2Vec's reasoning: words that appear in the same surroundings must have similar meanings, so give them similar vectors.
+
+The trick
+
+Word2Vec trains a tiny neural network on a simple guessing game:
+- CBOW: given the neighbour words, guess the middle word.
+- Skip-gram: given the middle word, guess the neighbour words.
+
+We don't actually care about the guesses. While learning to guess, the network is forced to build a good vector for each word inside its weights. After training, we throw away the network and keep those weights: they are the word embeddings.
+
+Step 1: take a sentence
+
+"watch campusx for data science"
+
+(Real training uses millions of sentences. We use one so we can follow every number.)
+
+Step 2: build the vocabulary
+
+┌───────┬───────┬─────────┬─────┬──────┬─────────┐
+│ Index │   0   │    1    │  2  │  3   │    4    │
+├───────┼───────┼─────────┼─────┼──────┼─────────┤
+│ Word  │ watch │ campusx │ for │ data │ science │
+└───────┴───────┴─────────┴─────┴──────┴─────────┘
+
+Vocabulary size V = 5.
+
+Step 3: one-hot encode each word
+
+Each word becomes a list of 5 numbers, with a 1 at its own index and 0 everywhere else:
+
+watch   → [1, 0, 0, 0, 0]
+campusx → [0, 1, 0, 0, 0]
+for     → [0, 0, 1, 0, 0]
+data    → [0, 0, 0, 1, 0]
+science → [0, 0, 0, 0, 1]
+
+This is how we feed words into the network. It's the vertical 0 1 0 0 0 box on the left of your screenshot.
+
+Step 4: choose the window size
+
+Window size is how many neighbours to look at on each side. With window = 1, we look 1 word left and 1 word right.
+
+Slide along the sentence:
+
+[watch]  campusx   for    data   science
+ watch  [campusx]  for    data   science     neighbours of campusx = watch, for
+ watch   campusx  [for]   data   science     neighbours of for     = campusx, data
+ watch   campusx   for   [data]  science     neighbours of data    = for, science
+
+This matches the top of your screenshot: for → campusx, data and data → for, science.
+
+Step 5: choose the embedding size
+
+This is how many numbers each word's vector will have. We pick N = 3. It matches the middle 3-box layer in your screenshot. Real models use 100–300.
+
+The network shape
+
+  Input (5)          Hidden (3)          Output (5)
+ one-hot word   →   the EMBEDDING   →   a score for every word
+              W_in               W_out
+             (5×3)               (3×5)
+
+Your screenshot shows this: 5×3 weights on the left and 3×5 on the right.
+- W_in (5×3) has one row of 3 numbers per word. These rows become the word vectors.
+- W_out (3×5) is used to score how likely each word is as the answer.
+
+Both start as random numbers (the "random" label in your screenshot).
+
+Our starting random weights:
+
+W_in (5×3)              W_out (3×5)
+watch   [0.2 0.1 0.4]         watch campusx for  data science
+campusx [0.5 0.3 0.1]   row1 [0.1  0.4    0.2  0.3  0.5]
+for     [0.1 0.6 0.2]   row2 [0.3  0.2    0.6  0.1  0.2]
+data    [0.3 0.2 0.5]   row3 [0.5  0.1    0.3  0.4  0.2]
+science [0.4 0.4 0.3]
+
+Part 5: CBOW (Continuous Bag of Words), step by step
+
+The game
+
+▎ Given the neighbours, guess the middle word.
+
+watch  ____  for      → answer: campusx
+
+Step 1: make training examples
+
+Slide the window and write down (neighbours → middle word):
+
+┌─────────────────┬─────────────────┐
+│ Input (context) │ Target (answer) │
+├─────────────────┼─────────────────┤
+│ campusx         │ watch           │
+├─────────────────┼─────────────────┤
+│ watch, for      │ campusx         │
+├─────────────────┼─────────────────┤
+│ campusx, data   │ for             │
+├─────────────────┼─────────────────┤
+│ for, science    │ data            │
+├─────────────────┼─────────────────┤
+│ data            │ science         │
+└─────────────────┴─────────────────┘
+
+We'll follow one example: (watch, for) → campusx.
+
+Step 2: look up the input words' vectors
+
+Multiplying a one-hot vector by W_in just picks out one row. So we simply look up each neighbour's row:
+
+watch → [0.2, 0.1, 0.4]
+for   → [0.1, 0.6, 0.2]
+
+Step 3: average them (this is the hidden layer)
+
+CBOW averages the neighbour vectors into one vector:
+
+h = (watch + for) / 2
+  = ([0.2, 0.1, 0.4] + [0.1, 0.6, 0.2]) / 2
+  = [0.15, 0.35, 0.30]
+
+This h is the network's summary of the context: "what kind of word fits between watch and for?"
+
+(It's called "bag of words" because averaging ignores order: watch+for is the same as for+watch.)
+
+Step 4: score every word in the vocabulary
+
+Multiply h by W_out to get one score per word:
+
+scores = h × W_out
+       = [0.27, 0.16, 0.33, 0.20, 0.21]
+          watch campusx for data science
+
+For example, the score for watch = 0.15×0.1 + 0.35×0.3 + 0.30×0.5 = 0.27.
+
+Doubt 1: is h calculated for every row?
+
+Yes. Each row of the table is a separate training example, and each one gets its own h, made by averaging that row's input words.
+
+Reminder of the weights (W_in, one row per word):
+
+watch   → [0.2, 0.1, 0.4]
+campusx → [0.5, 0.3, 0.1]
+for     → [0.1, 0.6, 0.2]
+data    → [0.3, 0.2, 0.5]
+science → [0.4, 0.4, 0.3]
+
+h for each training example:
+
+┌─────┬─────────────────┬───────────────────────────────────────┬────────────────────┬─────────┐
+│  #  │ Input (context) │          How h is calculated          │         h          │ Target  │
+├─────┼─────────────────┼───────────────────────────────────────┼────────────────────┼─────────┤
+│ 1   │ campusx         │ only one word, so no averaging needed │ [0.50, 0.30, 0.10] │ watch   │
+├─────┼─────────────────┼───────────────────────────────────────┼────────────────────┼─────────┤
+│ 2   │ watch, for      │ ([0.2,0.1,0.4] + [0.1,0.6,0.2]) / 2   │ [0.15, 0.35, 0.30] │ campusx │
+├─────┼─────────────────┼───────────────────────────────────────┼────────────────────┼─────────┤
+│ 3   │ campusx, data   │ ([0.5,0.3,0.1] + [0.3,0.2,0.5]) / 2   │ [0.40, 0.25, 0.30] │ for     │
+├─────┼─────────────────┼───────────────────────────────────────┼────────────────────┼─────────┤
+│ 4   │ for, science    │ ([0.1,0.6,0.2] + [0.4,0.4,0.3]) / 2   │ [0.25, 0.50, 0.25] │ data    │
+├─────┼─────────────────┼───────────────────────────────────────┼────────────────────┼─────────┤
+│ 5   │ data            │ only one word, so no averaging needed │ [0.30, 0.20, 0.50] │ science │
+└─────┴─────────────────┴───────────────────────────────────────┴────────────────────┴─────────┘
+
+Rows 1 and 5 have just one neighbour because watch and science sit at the ends of the sentence.
+
+The order training actually happens in
+
+The network doesn't compute all 5 h values first and then learn. It handles one example at a time:
+
+Example 1:  compute h → scores → softmax → error → UPDATE weights
+Example 2:  compute h (using the UPDATED weights) → scores → ... → UPDATE
+Example 3:  ...
+Example 4:  ...
+Example 5:  ...
+            ── that's 1 epoch ──
+Repeat everything for epoch 2, 3, ... 50
+
+So the table above is only correct for the very first pass. After example 1 updates the weights, example 2's h will come out slightly different from what's shown. I showed the table with the starting weights so you can see how each h is formed.
+
+Doubt 2: how is h × W_out calculated when W_out is 3×5?
+
+This is ordinary matrix multiplication. The shapes line up like this:
+
+    h         ×       W_out       =     scores
+  (1 × 3)          (3 × 5)            (1 × 5)
+       ↑______________↑
+     these must match (3 = 3)
+
+- h has 3 numbers (1 row, 3 columns).
+- W_out has 3 rows and 5 columns.
+- The inner numbers (3 and 3) match, so the multiplication works.
+- The result takes the outer numbers: 1 × 5, which gives 5 scores, one for each word in the vocabulary.
+
+Think of W_out as 5 columns, one per word
+
+                watch  campusx  for   data  science
+              ┌──────┬───────┬──────┬──────┬───────┐
+W_out  row 1  │ 0.1  │  0.4  │ 0.2  │ 0.3  │  0.5  │
+       row 2  │ 0.3  │  0.2  │ 0.6  │ 0.1  │  0.2  │
+       row 3  │ 0.5  │  0.1  │ 0.3  │ 0.4  │  0.2  │
+              └──────┴───────┴──────┴──────┴───────┘
+
+Each column is a 3-number "answer vector" for one word. To get a word's score, multiply h with that word's column number by number, then add.
+
+h = [0.15, 0.35, 0.30] (example 2: watch, for → campusx)
+
+Score for watch (column 1 = [0.1, 0.3, 0.5]):
+
+  0.15 × 0.1 = 0.015
+  0.35 × 0.3 = 0.105
+  0.30 × 0.5 = 0.150
+               ─────
+         sum = 0.270
+
+Score for campusx (column 2 = [0.4, 0.2, 0.1]):
+
+  0.15 × 0.4 = 0.060
+  0.35 × 0.2 = 0.070
+  0.30 × 0.1 = 0.030
+               ─────
+         sum = 0.160
+
+Score for for (column 3 = [0.2, 0.6, 0.3]):
+
+  0.15 × 0.2 = 0.030
+  0.35 × 0.6 = 0.210
+  0.30 × 0.3 = 0.090
+               ─────
+         sum = 0.330
+
+Score for data (column 4 = [0.3, 0.1, 0.4]):
+
+  0.15 × 0.3 = 0.045
+  0.35 × 0.1 = 0.035
+  0.30 × 0.4 = 0.120
+               ─────
+         sum = 0.200
+
+Score for science (column 5 = [0.5, 0.2, 0.2]):
+
+  0.15 × 0.5 = 0.075
+  0.35 × 0.2 = 0.070
+  0.30 × 0.2 = 0.060
+               ─────
+         sum = 0.205  (I rounded this to 0.21 last time)
+
+Put the 5 sums together
+
+scores = [0.270, 0.160, 0.330, 0.200, 0.205]
+          watch  campusx for   data   science
+
+That's the whole h × W_out step: 5 small "multiply and add" calculations, one per column.
+
+What a score means
+
+Each score measures how well h matches that word's column:
+- If h and a column have big numbers in the same positions, the products are big and the score is high.
+- If they don't line up, the score is low.
+
+Here for got the highest score (0.33) because h's biggest number (0.35, position 2) lines up with for's biggest number (0.6, position 2). Right now that's just luck from the random weights. Training changes the weights so the correct word's column lines up best with h.
+
+The full picture
+
+Step 2:  look up rows in W_in      watch → [0.2, 0.1, 0.4]
+                                   for   → [0.1, 0.6, 0.2]
+
+Step 3:  average them              h = [0.15, 0.35, 0.30]      (1×3)
+
+Step 4:  h × W_out                 compare h with each of the 5 columns
+         (1×3) × (3×5)             → scores = [0.27, 0.16, 0.33, 0.20, 0.205]   (1×5)
+
+Step 5:  softmax                   → probabilities (add up to 1)
+
+Step 6+: compare with target (campusx), compute error, update W_in & W_out
+
+→ next training example, with its own h
+
+In short:
+- W_in has one row per word. Its rows are the input vectors, and they become the final embeddings.
+- W_out has one column per word. Its columns are the "answer" vectors used for scoring.
+- h × W_out compares h against every word's column, giving one score per word.
+
+
+
+Step 5: turn scores into probabilities (softmax)
+
+Softmax turns scores into probabilities that add up to 1 (100%):
+
+probabilities = [0.21, 0.19, 0.22, 0.19, 0.19]
+                 watch campusx for data science
+
+The network is saying "I think the answer is for (22%)". The correct answer is campusx, which only got 19%. That's expected, because the weights are random.
+
+Step 6: measure the mistake (loss)
+
+Compare with the correct answer, the one-hot for campusx:
+
+correct   = [0,    1,    0,    0,    0   ]
+predicted = [0.21, 0.19, 0.22, 0.19, 0.19]
+error     = predicted − correct
+          = [0.21, -0.81, 0.22, 0.19, 0.19]
+
+- The −0.81 for campusx means "you should have scored this much higher."
+- The +0.2s for the others mean "you should have scored these lower."
+
+The loss (how wrong it was) is −log(0.19) = 1.68. Lower is better, and a perfect guess gives 0.
+
+Step 7: fix the weights (backpropagation)
+
+The network nudges its weights a little in the direction that reduces the error:
+- W_out: the campusx column is pushed toward h, and the other columns are pushed away.
+- W_in: the watch and for rows are pushed so their average points more toward campusx.
+
+After one update (learning rate 0.5), running the same example again gives:
+
+before:  campusx = 0.19  (19%)
+after:   campusx = 0.21  (21%)   ← it learned a little!
+
+Step 8: repeat for all examples, many times (epochs)
+
+Do Steps 2–7 for every training example, and go through the whole data many times. Each full pass is called an epoch (also written in your screenshot).
+
+Over thousands of updates, the network gets good at the guessing game.
+
+Step 9: keep W_in and throw away the rest
+
+After training, each row of W_in is that word's embedding:
+
+campusx → [row 1 of W_in]   ← this is campusx's word vector
+data    → [row 3 of W_in]
+...
+
+Why this makes similar words similar
+
+Suppose the training text also contains:
+
+"watch campusx for data science"
+"watch youtube for data science"
+
+Both campusx and youtube have to be predicted from the same neighbours (watch, for). The only way the network can do well on both is to give them similar vectors. Meaning comes out of shared context.
+
+
+
+model = Word2Vec(
+      sentences,
+      vector_size=100,   # embedding size (N)
+      window=5,          # neighbours on each side
+      min_count=1,       # ignore words that appear fewer times than this
+      sg=0,              # 0 = CBOW, 1 = Skip-gram
+      epochs=50,
+  )
+  what's the difference between vector_size and window ,
+
+
+
+window is about the sentence. It decides which words count as "neighbours."
+
+Sentence: watch campusx for data science, looking at the word for:
+
+window=1:            campusx [for] data                  → 2 neighbours
+window=2:   watch    campusx [for] data   science        → 4 neighbours
+
+- A bigger window means more neighbours, more training pairs, and broader "topic" similarity.
+- A smaller window means only close neighbours, and captures more grammar-like similarity.
+
+window has nothing to do with the size of the vector. It only decides which training examples are made.
+
+vector_size: how long each word's vector is
+
+vector_size is about the word's vector. It decides how many numbers describe each word.
+
+vector_size=3:    campusx → [0.5, 0.3, 0.1]
+vector_size=5:    campusx → [0.5, 0.3, 0.1, 0.7, 0.2]
+vector_size=100:  campusx → [0.5, 0.3, 0.1, ... 100 numbers]
+
+Think of it as how many "features" describe a word, like the royalty / male / food columns in the king–queen example. More numbers means more room to capture meaning, but it needs more data and training time.
+
+In the network diagram, it's the middle (hidden) layer size:
+
+Input (V=5)  →  Hidden (vector_size=3)  →  Output (V=5)
+                      ↑
+                this is vector_size
+
+That's why the weights in your screenshot were 5×3 and 3×5: 5 = vocabulary size, 3 = vector_size. window doesn't appear in the network shape at all.
+
+Changing one without the other
+
+Same sentence, same word campusx:
+
+┌───────────────────────────┬─────────────────────────────┬──────────────────┐
+│          Setting          │ Neighbours used in training │ campusx's vector │
+├───────────────────────────┼─────────────────────────────┼──────────────────┤
+│ window=1, vector_size=3   │ watch, for                  │ 3 numbers        │
+├───────────────────────────┼─────────────────────────────┼──────────────────┤
+│ window=2, vector_size=3   │ watch, for, data            │ still 3 numbers  │
+├───────────────────────────┼─────────────────────────────┼──────────────────┤
+│ window=1, vector_size=100 │ watch, for                  │ 100 numbers      │
+└───────────────────────────┴─────────────────────────────┴──────────────────┘
+
+- Changing window changes what the model learns from.
+- Changing vector_size changes how big the result is.
+
+A simple analogy
+
+You're learning about a new person at a party:
+- window is how many people standing nearby you listen to, to learn about them.
+- vector_size is how many notes you write about them in your notebook.
+
+Listening to more people doesn't change how many notes you're allowed to write, and the reverse is also true.
+
+Why they might have seemed the same
+
+In many tutorial examples, including the CampusX one, both happen to be small numbers like 3. Also, some tutorials say "window size 3" meaning 3 words total (1 left + middle + 1 right), while gensim's window=1 means 1 word on each side. With the hidden layer also being 3, it looks like one setting, but it's two separate ones.
+
+Typical real values
+
+Word2Vec(sentences, vector_size=100, window=5)
+#                   ↑ each word = 100 numbers
+#                                    ↑ look 5 words left + 5 words right
+
+
+

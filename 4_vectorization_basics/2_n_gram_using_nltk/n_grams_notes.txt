@@ -1,0 +1,177 @@
+N-grams explained with a new example
+
+What is an n-gram?
+
+An n-gram is a group of n words that sit next to each other in a sentence.
+
+┌─────────┬─────┬─────────────────────────────┬─────────────────────────────────┐
+│  Name   │  n  │           Meaning           │   From "pizza not very tasty"   │
+├─────────┼─────┼─────────────────────────────┼─────────────────────────────────┤
+│ Unigram │ 1   │ single words                │ pizza, not, very, tasty         │
+├─────────┼─────┼─────────────────────────────┼─────────────────────────────────┤
+│ Bigram  │ 2   │ pairs of neighbouring words │ pizza not, not very, very tasty │
+├─────────┼─────┼─────────────────────────────┼─────────────────────────────────┤
+│ Trigram │ 3   │ three neighbouring words    │ pizza not very, not very tasty  │
+└─────────┴─────┴─────────────────────────────┴─────────────────────────────────┘
+
+To find them, slide a window along the sentence one word at a time:
+
+Sentence:   pizza   not   very   tasty
+
+Bigrams (window of 2):
+            [pizza   not]
+                    [not   very]
+                           [very   tasty]
+
+Trigrams (window of 3):
+            [pizza   not   very]
+                    [not   very   tasty]
+
+The words must be next to each other. pizza tasty is not a bigram of this sentence, because other words sit between them.
+
+The example
+
+Assume stopwords like "is" have already been removed, just as in the lecture:
+
+S1 → "pizza very tasty"         (good review)
+S2 → "pizza not very tasty"     (bad review)
+
+ngram_range=(min, max)
+
+In sklearn, CountVectorizer(ngram_range=(min, max)) means "make every n-gram from size min up to size max":
+
+┌─────────────┬──────────────────────────────────────────┐
+│ ngram_range │              What it makes               │
+├─────────────┼──────────────────────────────────────────┤
+│ (1,1)       │ only unigrams (the default)              │
+├─────────────┼──────────────────────────────────────────┤
+│ (1,2)       │ unigrams + bigrams                       │
+├─────────────┼──────────────────────────────────────────┤
+│ (1,3)       │ unigrams + bigrams + trigrams            │
+├─────────────┼──────────────────────────────────────────┤
+│ (2,3)       │ bigrams + trigrams only, no single words │
+└─────────────┴──────────────────────────────────────────┘
+
+First, the problem with plain unigrams (1,1)
+
+          not  pizza  tasty  very
+S1   →     0     1      1     1
+S2   →     1     1      1     1
+
+The vectors are almost the same. They differ only in the not column, and the model has no idea what is "not". Word order is lost: "not very tasty" and "very tasty, not bad" look alike. N-grams fix this by keeping small groups of words together.
+
+Example 1: ngram_range=(1,3), uni + bi + trigrams
+
+Step 1: list every n-gram in each sentence
+
+S1 = "pizza very tasty"
+- Unigrams: pizza, very, tasty
+- Bigrams: pizza very, very tasty
+- Trigrams: pizza very tasty
+
+S2 = "pizza not very tasty"
+- Unigrams: pizza, not, very, tasty
+- Bigrams: pizza not, not very, very tasty
+- Trigrams: pizza not very, not very tasty
+
+Step 2: combine them into one vocabulary (sorted A→Z)
+
+Each unique n-gram becomes one column. That gives 11 columns.
+
+Step 3: mark 1 if the sentence contains that n-gram, else 0
+
+┌──────────────────┬──────┬─────┬─────┐
+│      n-gram      │ type │ S1  │ S2  │
+├──────────────────┼──────┼─────┼─────┤
+│ not              │ uni  │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ not very         │ bi   │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ not very tasty   │ tri  │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza            │ uni  │  1  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza not        │ bi   │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza not very   │ tri  │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza very       │ bi   │  1  │  0  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza very tasty │ tri  │  1  │  0  │
+├──────────────────┼──────┼─────┼─────┤
+│ tasty            │ uni  │  1  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ very             │ uni  │  1  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ very tasty       │ bi   │  1  │  1  │
+└──────────────────┴──────┴─────┴─────┘
+
+sklearn's actual output:
+
+S1 → [0 0 0 1 0 0 1 1 1 1 1]
+S2 → [1 1 1 1 1 1 0 0 1 1 1]
+
+Now the two sentences differ in 7 columns instead of 1. The column not very tasty directly tells the model "this review is negative."
+
+Upside: it keeps single words and captures phrases.
+Downside: the vocabulary grows fast: 4 columns became 11. With 5,572 SMS messages this can become tens of thousands of columns. That's why people often combine it with max_features.
+
+Example 2: ngram_range=(2,3), bi + trigrams only
+
+This is the same as (1,3), but with the single-word rows removed:
+
+┌──────────────────┬──────┬─────┬─────┐
+│      n-gram      │ type │ S1  │ S2  │
+├──────────────────┼──────┼─────┼─────┤
+│ not very         │ bi   │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ not very tasty   │ tri  │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza not        │ bi   │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza not very   │ tri  │  0  │  1  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza very       │ bi   │  1  │  0  │
+├──────────────────┼──────┼─────┼─────┤
+│ pizza very tasty │ tri  │  1  │  0  │
+├──────────────────┼──────┼─────┼─────┤
+│ very tasty       │ bi   │  1  │  1  │
+└──────────────────┴──────┴─────┴─────┘
+
+sklearn's actual output:
+
+S1 → [0 0 0 0 1 1 1]
+S2 → [1 1 1 1 0 0 1]
+
+Upside: you get fewer columns (7), and each one carries context.
+Downside: it loses single-word signals. In spam detection, one word like free or winner is a strong clue on its own. With (2,3), free only counts when it appears inside a phrase such as free entry. That's why (1,2) or (1,3) is more common in practice.
+
+Side-by-side summary
+
+┌─────────────┬───────────────────┬───────────────────────────────┐
+│ ngram_range │ Columns for S1+S2 │    Tells S1 and S2 apart?     │
+├─────────────┼───────────────────┼───────────────────────────────┤
+│ (1,1)       │         4         │ barely (1 column differs)     │
+├─────────────┼───────────────────┼───────────────────────────────┤
+│ (1,2)       │         8         │ yes (4 columns differ)        │
+├─────────────┼───────────────────┼───────────────────────────────┤
+│ (1,3)       │        11         │ strongly (7 columns differ)   │
+├─────────────┼───────────────────┼───────────────────────────────┤
+│ (2,3)       │         7         │ strongly, but no single words │
+└─────────────┴───────────────────┴───────────────────────────────┘
+
+How to use it in your code
+
+countVectorizerObj = CountVectorizer(max_features=100, ngram_range=(1, 3))
+x = countVectorizerObj.fit_transform(modified_sentenses)
+print(countVectorizerObj.get_feature_names_out())   # shows the n-grams
+
+Watch out for one thing in your script
+
+Your script removes NLTK stopwords, and "not" is in NLTK's English stopword list. So "pizza is not very tasty" becomes "pizza tasty" before CountVectorizer sees it, and bigrams like not very will never appear. The lecture's example only works because "not" is kept.
+
+If you want negations to survive, remove "not" from the stopword set before the loop:
+
+stop_words = set(stopwords.words('english')) - {'not', 'no', 'nor'}
+
+Then use if word not in stop_words: in the loop. This is also faster, because right now the set is rebuilt for every word.
