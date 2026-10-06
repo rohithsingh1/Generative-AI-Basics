@@ -1,0 +1,14 @@
+6_simple_RNN_indepth_explanation/working_simple_RNN_forward_propagation.txt
+  h_66f393e93fb8bf 1-439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e5c85dc04ff966314a2ac5ee60a9417fa5bf3d36",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
