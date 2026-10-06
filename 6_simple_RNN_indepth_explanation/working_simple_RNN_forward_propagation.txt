@@ -1,0 +1,439 @@
+Working of Simple RNN with forward propagation
+
+Step 1: words → vectors using one-hot encoding (OHE)
+
+In one-hot encoding, each word gets a vector with a single 1 at its own position and 0 everywhere else:
+
+ The   → [1 0 0 0 0]
+ food  → [0 1 0 0 0]
+ is    → [0 0 1 0 0]
+ good  → [0 0 0 1 0]
+ bad   → [0 0 0 0 1]
+
+ Step 2: feed the words one at a time
+
+          ┌──┐
+          ↓  │
+ I/P ──→ ( ○ ) ──→ O/P
+
+What happens inside, time step by time step (the big diagram on page 4):
+
+ t=1  x11 = "The"            Hidden Layer 1 (3 neurons)
+       1 ○ ─────╲
+       0 ○ ──────╲──────→  ◯ ─┐
+       0 ○ ───────╳─────→  ◯ ─┤  their outputs are passed down
+       0 ○ ──────╱──────→  ◯ ─┤  to the next time step
+       0 ○ ─────╱              │
+                               │
+ t=2  x12 = "food"             ↓
+       0 ○ ─────╲         ◯ ←─┤   ← each neuron gets:
+       1 ○ ──────╳──────→ ◯ ←─┤     (1) the new word "food"
+       0 ○ ─────╱         ◯ ←─┘     (2) the outputs from t=1
+       0 ○
+       0 ○
+
+ t=3  x13 = "is"   → same thing again ...
+
+
+ Key point from the diagram: at t=2 the hidden neurons receive the new word "food" plus what they produced at t=1 (from "The"). That is the "memory".
+
+ Counting trainable parameters, and forward propagation with time
+
+Trainable parameters (the network at t=4)
+
+   Input (5)          Hidden (3)            Output (1)
+                         ┌──┐
+                         ↓  │  3×3 = 9 weights (loop)
+    → ○ ╲              ┌─────┐
+    → ○ ─╲  15 weights │  ○  │╲   3 weights
+    → ○ ──╳──────────→ │  ○  │─────────→ ○ ──→ O/P
+    → ○ ─╱             │  ○  │╱          ↑
+    → ○ ╱              └─────┘         1 bias
+                        3 bias
+
+Part 1: input → hidden (15 weights + 3 biases)
+
+You already understood the first two shapes: the word is (1×5) and the weight matrix is (5×3).
+
+Why 15 weights? Count the lines
+
+Every input node connects to every hidden neuron:
+
+  Input node        lines going out
+  ──────────        ───────────────
+  x1  ○ ──────→ h1, h2, h3      = 3 lines
+  x2  ○ ──────→ h1, h2, h3      = 3 lines
+  x3  ○ ──────→ h1, h2, h3      = 3 lines
+  x4  ○ ──────→ h1, h2, h3      = 3 lines
+  x5  ○ ──────→ h1, h2, h3      = 3 lines
+                                 ─────────
+                                 15 lines = 15 weights
+
+5 inputs × 3 hidden neurons = 15. That's why the matrix is (5×3): 5 rows × 3 columns = 15 numbers inside it.
+
+What (1×5) · (5×3) = (1×3) means
+
+Here it is with real numbers. The word is "The" = [1 0 0 0 0], and the weight matrix holds 15 example numbers:
+
+                      h1    h2    h3
+                    ┌                 ┐
+           x1 (The) │ 0.2   0.5   0.1 │
+           x2 (food)│ 0.4   0.3   0.7 │
+           x3 (is)  │ 0.6   0.1   0.2 │     ← 5 rows × 3 columns
+           x4 (good)│ 0.3   0.8   0.5 │       = 15 weights
+           x5 (bad) │ 0.9   0.2   0.4 │
+                    └                 ┘
+
+Each hidden neuron multiplies the 5 input numbers by its own column of 5 weights, then adds them up:
+
+h1 = (1×0.2) + (0×0.4) + (0×0.6) + (0×0.3) + (0×0.9) = 0.2
+h2 = (1×0.5) + (0×0.3) + (0×0.1) + (0×0.8) + (0×0.2) = 0.5
+h3 = (1×0.1) + (0×0.7) + (0×0.2) + (0×0.5) + (0×0.4) = 0.1
+
+The result is 3 numbers, [0.2  0.5  0.1], one for each hidden neuron. That's the (1×3).
+
+The shape rule: (1×5) · (5×3). The two inside numbers (5 and 5) must match, and they cancel out. The outside numbers (1 and 3) give the answer shape:
+
+ (1 × 5) · (5 × 3)  =  (1 × 3)
+      └─same─┘
+  ↑               ↑
+  └── answer ─────┘
+
+
+Why 3 biases?
+
+Each hidden neuron adds its own bias to its total:
+
+h1 = 0.2 + b1
+h2 = 0.5 + b2
+h3 = 0.1 + b3
+
+3 neurons means 3 biases.
+
+
+Part 2: hidden → hidden, the loop (9 weights)
+
+This is the RNN's "memory" part. At t=1 the hidden layer produced 3 numbers (h1, h2, h3). At t=2, those 3 old numbers are sent back into the 3 hidden neurons.
+
+Again, every old output connects to every hidden neuron:
+
+  Old output (from t=1)     goes to (at t=2)
+  ─────────────────────     ────────────────
+  h1_old  ──────────→  h1, h2, h3     = 3 lines
+  h2_old  ──────────→  h1, h2, h3     = 3 lines
+  h3_old  ──────────→  h1, h2, h3     = 3 lines
+                                       ─────────
+                                        9 lines = 9 weights
+
+3 old outputs × 3 hidden neurons = 9, written as 3×3 in the notes.
+
+(1×3) means 1 row and 3 columns: a flat list of 3 numbers. Here, it's the 3 outputs the hidden layer produced at the previous time step:
+
+ (1×3)  =  [ h1_old   h2_old   h3_old ]
+
+(3×3) means 3 rows and 3 columns: a grid of 9 numbers. Here, it's the 9 loop weights, one for each line in the loop:
+
+                       to h1   to h2   to h3
+                     ┌                       ┐
+   from h1_old  →    │  w'11    w'12    w'13 │
+   from h2_old  →    │  w'21    w'22    w'23 │
+   from h3_old  →    │  w'31    w'32    w'33 │
+                     └                       ┘
+
+- Rows = where the line comes from (an old output)
+- Columns = where the line goes to (a hidden neuron at the current step)
+
+A full example: t=1, then t=2
+
+I'll reuse the numbers from Part 1. To keep the maths easy, I'll skip the activation function f and use biases b1 = b2 = b3 = 0.1.
+
+Step A: what happened at t=1 (word = "The")
+
+From Part 1, the word "The" gave [0.2  0.5  0.1]. Adding the biases:
+
+h1 = 0.2 + 0.1 = 0.3
+h2 = 0.5 + 0.1 = 0.6
+h3 = 0.1 + 0.1 = 0.2
+
+So the hidden layer's output at t=1 is [0.3  0.6  0.2]. This is the "memory" of the word "The", and it's the (1×3).
+
+Step B: t=2 (word = "food")
+
+Each hidden neuron now receives three things. Let's compute each one.
+
+Piece 1: the new word × input weights (from Part 1)
+
+"food" = [0 1 0 0 0], so only row 2 (food) of the input weight matrix counts:
+
+from the new word:   h1 gets 0.4    h2 gets 0.3    h3 gets 0.7
+
+                      h1    h2    h3
+                    ┌                 ┐
+           x1 (The) │ 0.2   0.5   0.1 │
+           x2 (food)│ 0.4   0.3   0.7 │
+           x3 (is)  │ 0.6   0.1   0.2 │     ← 5 rows × 3 columns
+           x4 (good)│ 0.3   0.8   0.5 │       = 15 weights
+           x5 (bad) │ 0.9   0.2   0.4 │
+                    └                 ┘
+
+Each hidden neuron multiplies the 5 input numbers by its own column of 5 weights, then adds them up:
+
+h1 = (0×0.2) + (1×0.4) + (0×0.6) + (0×0.3) + (0×0.9) = 0.4
+h2 = (0×0.5) + (1×0.3) + (0×0.1) + (0×0.8) + (0×0.2) = 0.3
+h3 = (0×0.1) + (1×0.7) + (0×0.2) + (0×0.5) + (0×0.4) = 0.7
+
+The result is 3 numbers, [0.4  0.3  0.7], one for each hidden neuron. That's the (1×3).
+
+Piece 2: the old outputs × loop weights (this is the (1×3)·(3×3))
+
+The 9 loop weights (example numbers):
+
+                       to h1   to h2   to h3
+   from h1_old (0.3)  │  0.5     0.1     0.2 │
+   from h2_old (0.6)  │  0.3     0.4     0.1 │
+   from h3_old (0.2)  │  0.2     0.6     0.5 │
+
+ [0.3 0.6 0.2]  │  0.5     0.1     0.2 │
+                   │  0.3     0.4     0.1 │
+                   │  0.2     0.6     0.5 │
+                
+Each hidden neuron reads its own column and multiplies by the 3 old outputs:
+
+ h1 gets:  (0.3 × 0.5) + (0.6 × 0.3) + (0.2 × 0.2)  =  0.15 + 0.18 + 0.04  =  0.37
+ h2 gets:  (0.3 × 0.1) + (0.6 × 0.4) + (0.2 × 0.6)  =  0.03 + 0.24 + 0.12  =  0.39
+ h3 gets:  (0.3 × 0.2) + (0.6 × 0.1) + (0.2 × 0.5)  =  0.06 + 0.06 + 0.10  =  0.22
+
+ The result is 3 numbers, [0.37  0.39  0.22]. So:
+
+ (1×3)            ·   (3×3)          =   (1×3)
+ [0.3 0.6 0.2]        9 loop weights     [0.37 0.39 0.22]
+ old memory                              memory's contribution, one number per neuron
+
+Piece 3: the bias
+
+Each neuron adds its own bias: 0.1.
+
+Putting the three pieces together at t=2
+
+ ┌──────┬──────────────┬───────────────┬────────┬─────────┐
+ │      │ Piece 1      │ Piece 2       │ Piece 3│  Total  │
+ │      │ new word     │ old memory    │ bias   │  at t=2 │
+ ├──────┼──────────────┼───────────────┼────────┼─────────┤
+ │ h1   │   0.4        │   0.37        │  0.1   │  0.87   │
+ │ h2   │   0.3        │   0.39        │  0.1   │  0.79   │
+ │ h3   │   0.7        │   0.22        │  0.1   │  1.02   │
+ └──────┴──────────────┴───────────────┴────────┴─────────┘
+
+The hidden output at t=2 is [0.87  0.79  1.02]. It now carries information about "food" (piece 1) and "The" (piece 2).
+
+
+This is exactly your PDF's formula:
+
+ O2  =  f(  x12 · w   +   O1 · w'   +   b1  )
+            ───────       ────────      ──
+            Piece 1       Piece 2       Piece 3
+            new word      old memory    bias
+            "food"        from "The"
+
+At t=3 ("is") the same thing happens again. [0.87  0.79  1.02] becomes the new "old memory", and it is multiplied by the same 9 loop weights. Then at t=4 ("good") it happens once more.
+
+
+Part 3: hidden → output
+
+When does this happen?
+
+Only once, after the last word (t=4). In your PDF, only O4 goes to the sigmoid. O1, O2 and O3 are only passed along as memory.
+
+ t=1 → t=2 → t=3 → t=4 → [final hidden output] → output neuron → sigmoid → ŷ
+
+
+points to remember
+
+ weight shape = (neurons it comes FROM) × (neurons it goes TO)
+
+┌─────────────────────────┬──────────────────┬──────────────────┬───────┬─────────┐
+│       Connection        │       From       │        To        │ Shape │ Weights │
+├─────────────────────────┼──────────────────┼──────────────────┼───────┼─────────┤
+│ Part 1: input → hidden  │ 5 input nodes    │ 3 hidden neurons │ (5×3) │ 15      │
+├─────────────────────────┼──────────────────┼──────────────────┼───────┼─────────┤
+│ Part 2: hidden → hidden │ 3 old outputs    │ 3 hidden neurons │ (3×3) │ 9       │
+├─────────────────────────┼──────────────────┼──────────────────┼───────┼─────────┤
+│ Part 3: hidden → output │ 3 hidden neurons │ 1 output neuron  │ (3×1) │ 3       │
+└─────────────────────────┴──────────────────┴──────────────────┴───────┴─────────┘
+
+
+In Part 3, the lines start at 3 hidden neurons and all end at 1 output neuron:
+
+  h1 ───╲
+  h2 ────→  ○   (1 output neuron)
+  h3 ───╱
+
+  3 FROM  ×  1 TO  =  (3×1)  =  3 lines  =  3 weights
+
+Written as a grid, rows are "from" and the column is "to", just like the 9 loop weights in Part 2. There's only 1 "to" neuron, so there's only 1 column:
+
+                to output
+ from h1   │     0.6     │
+ from h2   │     0.2     │
+ from h3   │     0.3     │
+
+3 rows × 1 column = (3×1).
+
+The example
+
+Suppose that after processing all 4 words ("The food is good"), the hidden layer ends with:
+
+ final hidden output = [ 0.9   0.8   1.0 ]     ← (1×3)
+
+The output layer has 1 neuron, and each of the 3 hidden neurons connects to it with one line, so one weight each:
+
+  h1 (0.9) ──── × 0.6 ────╲
+  h2 (0.8) ──── × 0.2 ─────→  ○  output neuron
+  h3 (1.0) ──── × 0.3 ────╱   ↑
+                              bias = 0.1
+
+  3 lines = 3 weights     1 neuron = 1 bias
+
+The 3 output weights stand up as a column, which is the (3×1) in the notes:
+
+ ┌     ┐
+ │ 0.6 │  ← from h1
+ │ 0.2 │  ← from h2      (3 rows × 1 column = 3 weights)
+ │ 0.3 │  ← from h3
+ └     ┘
+
+ [ 0.9   0.8   1.0 ] │ 0.6 │
+                     │ 0.2 │
+                     │ 0.3 │ 
+
+The calculation
+
+1. Multiply and add: (1×3) · (3×1) = (1×1), which means 3 numbers go in and 1 number comes out:
+
+ (0.9 × 0.6) + (0.8 × 0.2) + (1.0 × 0.3)  =  0.54 + 0.16 + 0.30  =  1.00
+
+2. Add the output bias:
+
+ 1.00 + 0.1 = 1.10
+
+3. Apply sigmoid. Sigmoid squashes any number into the range 0 to 1, so it can be read as a probability:
+
+ sigmoid(1.10) = 1 / (1 + e^(−1.10)) ≈ 0.75
+
+4. Read the prediction:
+
+ ŷ = 0.75  →  75% sure it's positive  →  above 0.5, so predict 1 (positive)
+
+5. Compute the loss. This is the PDF's Loss = y − ŷ. The real answer for "The food is good" is y = 1:
+
+ Loss = 1 − 0.75 = 0.25
+
+
+All three parts on one page
+
+              PART 1                  PART 2                 PART 3
+          (each time step)        (each time step)       (once, at the end)
+
+  word ──[5×3: 15 weights]──→ ┌──────────────┐
+  (1×5)                       │ hidden layer │──[3×1: 3 weights]──→ ○ ──→ sigmoid ──→ ŷ
+                              │  3 neurons   │                      ↑
+                              │  3 biases    │                    1 bias
+                              └──────────────┘
+                                 ↑        │
+                                 └[3×3: 9]┘
+                                 loop weights
+                              (old output → back in)
+
+  Weights:  15 + 9 + 3 = 27
+  Biases:    3 + 0 + 1 =  4
+  Total:               = 31
+
+
+You're right that bias is added to h1, h2 and h3. That already happened inside the hidden layer. The bias in Part 3 is a different, extra one.
+
+There are two separate sets of biases, because there are two layers of neurons:
+
+   HIDDEN LAYER (3 neurons)              OUTPUT LAYER (1 neuron)
+   each has its own bias                 has its own bias
+
+   h1  ← b1 = 0.1  ┐
+   h2  ← b2 = 0.1  ├── 3 biases           ○  ← b_out = 0.1   ── 1 bias
+   h3  ← b3 = 0.1  ┘
+
+That's where the bias total of 4 comes from: 3 hidden + 1 output.
+
+
+Hidden neuron h1 (at every time step, Parts 1 and 2):
+
+ h1 = [new word × weights] + [old memory × loop weights] + b1
+                                                         ──
+                                              h1's own bias (0.1)
+
+So by the time we reach the end (t=4), [0.9  0.8  1.0] already has b1, b2 and b3 inside it. We don't add them again.
+
+Output neuron (Part 3, once at the end). It follows the same recipe, with its inputs being h1, h2 and h3:
+
+ output = (h1 × 0.6) + (h2 × 0.2) + (h3 × 0.3)  +  b_out
+        = (0.9 × 0.6) + (0.8 × 0.2) + (1.0 × 0.3)  +  0.1
+        =   0.54     +   0.16     +   0.30       +  0.1
+        =   1.10
+                                                  ─────
+                                      the output neuron's own bias
+
+Why not add the bias to each of h1, h2, h3 here?
+
+That would be giving the hidden neurons a second bias. Their biases (b1, b2, b3) were already added when they calculated their own values. The output neuron is a new neuron, so it gets its own one bias, added to its own total after it combines h1, h2 and h3.
+
+
+adding it all up
+
+ ┌──────────────────────┬─────────────────┬────────┐
+ │ Connection           │ Weights (lines) │ Biases │
+ ├──────────────────────┼─────────────────┼────────┤
+ │ Input  → Hidden      │ 5 × 3 = 15      │   3    │  (one per hidden neuron)
+ │ Hidden → Hidden loop │ 3 × 3 =  9      │   0    │  (already counted above)
+ │ Hidden → Output      │ 3 × 1 =  3      │   1    │  (one output neuron)
+ ├──────────────────────┼─────────────────┼────────┤
+ │ Total                │ 27              │   4    │
+ └──────────────────────┴─────────────────┴────────┘
+
+            27 weights + 4 biases = 31 trainable parameters
+
+"Trainable" means these 31 numbers start random and get adjusted during training, so the network gets better at predicting positive or negative.
+
+
+A quick way to remember it
+
+For any fully connected layer:
+
+ weights = (neurons in) × (neurons out)
+ biases  = (neurons out)
+
+┌─────────────────┬──────────┬─────────┬─────────────────────────────────┐
+│      Layer      │ In → Out │ Weights │             Biases              │
+├─────────────────┼──────────┼─────────┼─────────────────────────────────┤
+│ Input → Hidden  │ 5 → 3    │ 15      │ 3                               │
+├─────────────────┼──────────┼─────────┼─────────────────────────────────┤
+│ Loop            │ 3 → 3    │ 9       │ 0 (shared with the layer above) │
+├─────────────────┼──────────┼─────────┼─────────────────────────────────┤
+│ Hidden → Output │ 3 → 1    │ 3       │ 1                               │
+└─────────────────┴──────────┴─────────┴─────────────────────────────────┘
+
+Test yourself: what if the vocabulary had 6 words and the hidden layer had 4 neurons, with 1 output?
+
+<details>
+<summary>Answer</summary>
+
+- Input → hidden: 6 × 4 = 24 weights + 4 biases
+- Loop: 4 × 4 = 16 weights
+- Hidden → output: 4 × 1 = 4 weights + 1 bias
+- Total = 24 + 16 + 4 + 4 + 1 = 49
+  </details>
+
+
+for more information , checkout to claude --resume 51920fe3-3b56-40c4-92fe-0edb0b6d20a9
+
+
+
+
+
