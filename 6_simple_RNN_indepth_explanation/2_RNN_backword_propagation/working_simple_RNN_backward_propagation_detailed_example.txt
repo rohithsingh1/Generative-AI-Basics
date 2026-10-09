@@ -1,0 +1,198 @@
+RNN backpropagation through time: your notes, updated
+
+---
+
+1. Forward propagation
+
+Diagram: the RNN unrolled over 3 time steps
+
+                 b1               b1               b1
+                 ↓                ↓                ↓
+  O0 ──Wh──→  (  ○  ) ──O1─Wh─→ (  ○  ) ──O2─Wh─→ (  ○  ) ──O3──Wo──→ [σ sigmoid] ──→ ŷ
+  (= 0)          ↑                ↑                ↑
+                 Wi               Wi               Wi
+                 │                │                │
+                xi1              xi2              xi3
+                t=1              t=2              t=3
+
+  i = sentence number  →  S1 = <x11 x12 x13>, S2 = <x21 x22 x23>, ...
+  O0 = starting memory, set to zeros (or random values)
+
+Equations (all three lines now follow the same pattern)
+
+O1 = f(xi1·Wi + O0·Wh + b1)        ← O0 = 0, so the O0·Wh term is 0
+O2 = f(xi2·Wi + O1·Wh + b1)
+O3 = f(xi3·Wi + O2·Wh + b1)
+ŷ  = σ(O3·Wo)
+
+f = activation function (usually tanh),  σ = sigmoid
+
+---
+
+2. Loss
+
+Loss = y − ŷ          ← shows the idea of "error"
+
+▎ Note: y − ŷ is a good way to show the idea of error. In practice, binary classification uses log loss (binary cross-entropy), because it's the one that gets differentiated during training:
+▎ Loss = −[ y·log(ŷ) + (1 − y)·log(1 − ŷ) ]
+
+---
+
+3. Goal: reduce the loss by updating all the weights
+
+- The loss goes down when we update all the weights [Wi, Wh, Wo].
+- We stop when the loss is very, very low, at the global minimum.
+
+Diagram: gradient descent
+
+  Loss
+   │
+   │ \                       /
+   │  \                     /
+   │   \   ● start         /
+   │    \    ↘            /
+   │     \     ●         /        each step moves downhill
+   │      \      ↘      /
+   │       \       ●   /
+   │        \_____●___/
+   │              ↑
+   │        global minimum → loss is lowest
+   └──────────────────────────────── weight
+
+Once the loss is calculated, we update the weights backwards. The first weight updated is Wo, the output weight, because it is closest to the loss.
+
+---
+
+4. Weight update formula
+
+W_new = W_old − η · ∂Loss/∂W_old
+                │   └──────┬─────┘
+                │          └─→ slope (derivative) used by gradient descent
+                └─→ learning rate: a small constant value (e.g. 0.001)
+
+---
+
+5. Diagram: how the blame flows backwards
+
+ FORWARD  →→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→
+
+   O0 ──→ O1 ──→ O2 ──→ O3 ──→ ŷ ──→ Loss
+          ↑      ↑      ↑      ↑
+          Wi,Wh  Wi,Wh  Wi,Wh  Wo
+
+ ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←  BACKWARD
+
+   Loss ──→ ŷ ──→ O3 ──→ O2 ──→ O1
+   (blame starts here and is passed back one time step at a time)
+
+---
+
+6. ① Update Wo (output weight): 1 term
+
+Dependency chain
+
+   Loss ←── ŷ ←── Wo
+The loss depends on ŷ, and ŷ depends on Wo.
+
+Formula
+
+∂Loss/∂Wo_old = ∂Loss/∂ŷ × ∂ŷ/∂Wo_old
+
+Wo_new = Wo_old − η · ∂Loss/∂Wo_old
+
+---
+
+7. ② Update Wh (hidden layer weights): 3 terms, one per time step
+
+Dependency chains (Wh is used at every time step, so there are 3 roads)
+
+t=3 road
+
+   Loss ←── ŷ ←── O3 ←── Wh
+The loss depends on ŷ, ŷ depends on O3, and O3 depends on Wh.
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂Wh ]
+
+t=2 road
+
+   Loss ←── ŷ ←── O3 ←── O2 ←── Wh
+The loss depends on ŷ, ŷ depends on O3, O3 depends on O2, and O2 depends on Wh.
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂Wh ]
+
+t=1 road
+
+   Loss ←── ŷ ←── O3 ←── O2 ←── O1 ←── Wh
+The loss depends on ŷ, ŷ depends on O3, O3 depends on O2, O2 depends on O1, and O1 depends on Wh.
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂O1 · ∂O1/∂Wh ]
+
+Add the 3 roads
+
+∂Loss/∂Wh_old = [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂Wh ]                       ← t=3
+              + [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂Wh ]             ← t=2
+              + [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂O1 · ∂O1/∂Wh ]   ← t=1
+
+Wh_new = Wh_old − η · ∂Loss/∂Wh_old
+
+---
+
+8. ③ Update Wi (input weights): 3 terms, same pattern
+
+t=3 road (word xi3)
+
+   Loss ←── ŷ ←── O3 ←── Wi
+The loss depends on ŷ, ŷ depends on O3, and O3 depends on Wi (through the word xi3).
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂Wi ]
+
+t=2 road (word xi2)
+
+   Loss ←── ŷ ←── O3 ←── O2 ←── Wi
+The loss depends on ŷ, ŷ depends on O3, O3 depends on O2, and O2 depends on Wi (through the word xi2).
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂Wi ]
+
+t=1 road (word xi1)
+
+   Loss ←── ŷ ←── O3 ←── O2 ←── O1 ←── Wi
+The loss depends on ŷ, ŷ depends on O3, O3 depends on O2, O2 depends on O1, and O1 depends on Wi (through the word xi1).
+[ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂O1 · ∂O1/∂Wi ]
+
+Add the 3 roads
+
+∂Loss/∂Wi_old = [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂Wi ]                       ← t=3
+              + [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂Wi ]             ← t=2
+              + [ ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂O1 · ∂O1/∂Wi ]   ← t=1
+
+Wi_new = Wi_old − η · ∂Loss/∂Wi_old
+
+---
+
+A simple way to remember it: each sentence turns straight into its formula. Every "A depends on B" becomes one factor ∂A/∂B. Multiply the factors along one road, then add the roads together.
+
+---
+
+9. The key idea
+
+┌────────┬────────────────────┬───────────────────────┐
+│ Weight │   Used how often   │ Terms in its gradient │
+├────────┼────────────────────┼───────────────────────┤
+│ Wo     │ once (at the end)  │ 1                     │
+├────────┼────────────────────┼───────────────────────┤
+│ Wh     │ at every time step │ 3, added              │
+├────────┼────────────────────┼───────────────────────┤
+│ Wi     │ at every time step │ 3, added              │
+└────────┴────────────────────┴───────────────────────┘
+
+- Multiply along each chain (chain rule).
+- Add the chains, because the same weight is reused at every time step.
+
+---
+
+10. Next topic: vanishing gradient
+
+ t=3:  ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂W                          → 3 factors
+ t=2:  ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂W                → 4 factors
+ t=1:  ∂L/∂ŷ · ∂ŷ/∂O3 · ∂O3/∂O2 · ∂O2/∂O1 · ∂O1/∂W      → 5 factors
+                                                 ↓
+                          longer chain = more small numbers multiplied
+                                                 ↓
+                               the gradient shrinks toward 0
+
+▎ The longer chains (t=1) multiply many small numbers, so the gradient vanishes. The RNN then can't learn from early words. LSTM fixes this.
