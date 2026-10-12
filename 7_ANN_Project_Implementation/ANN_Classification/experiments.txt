@@ -1,0 +1,780 @@
+data = data.drop(['RowNumber','CustomerId','Surname'],axis=1) , 
+here if i pass axis=0 , what happens , what's the difference between axis=0 , axis=1
+
+- axis=0 (the default) means rows. Pandas looks for the labels in the index (row labels).
+- axis=1 means columns. Pandas looks for the labels in the column names.
+
+What happens with axis=0 in your code
+
+data = data.drop(['RowNumber','CustomerId','Surname'], axis=0)
+
+Pandas will look for rows whose index label is 'RowNumber', 'CustomerId' or 'Surname'. Your index is probably the default 0, 1, 2, …, so no row has those labels, and you get:
+
+KeyError: "['RowNumber', 'CustomerId', 'Surname'] not found in axis"
+
+Example
+
+import pandas as pd
+
+df = pd.DataFrame({
+    'RowNumber': [1, 2, 3],
+    'Surname':   ['A', 'B', 'C'],
+    'Age':       [30, 40, 50]
+})
+
+df.drop(['Surname'], axis=1)   # removes the Surname column
+df.drop([0, 2], axis=0)        # removes the rows with index 0 and 2
+df.drop(['Surname'], axis=0)   #  KeyError: no row is labeled 'Surname'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ here def fit_transform(y: ArrayLike) -> ArrayLike , but print(type(data['Gender'])) prints <class 'pandas.Series'> , 
+ how both are same ArrayLike ,  <class 'pandas.Series'>
+
+ArrayLike and pandas.Series aren't the same thing. They're two different kinds of label:
+
+Simple analogy
+
+Think of a sign at a parking lot that says "Vehicles allowed".
+
+- "Vehicle" is a category (like ArrayLike).
+- Your Honda is an actual car (like pandas.Series).
+
+Nobody drives a "vehicle" in general. They drive a car, a bike or a truck. But your car fits the category, so it's allowed in.
+
+What ArrayLike covers
+
+Roughly, ArrayLike means "any of these":
+list            [1, 2, 3]
+tuple           (1, 2, 3)
+numpy array     np.array([1, 2, 3])
+pandas Series   pd.Series([1, 2, 3])
+...and similar things
+
+So when the function says fit_transform(y: ArrayLike), it's saying: "give me anything list-like." A pandas.Series qualifies, so passing data['Gender'] is fine.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+what is the use of np.asarray(),in np.asarray(label_encoder_gender.fit_transform(data['Gender'])) ,what input it takes , what type of input it takes , what it outputs , what type it outputs?
+
+What np.asarray() does
+
+It turns its input into a NumPy array. If the input is already a NumPy array, it hands back that same array without making a copy.
+
+Input: what it accepts
+
+Anything list-like, in other words anything that fits ArrayLike:
+
+np.asarray([1, 2, 3])                 # list
+np.asarray((1, 2, 3))                 # tuple
+np.asarray(pd.Series([1, 2, 3]))      # pandas Series
+np.asarray(np.array([1, 2, 3]))       # NumPy array (already one)
+np.asarray(5)                         # even a single number
+
+Output: what it returns
+
+The output is always a numpy.ndarray, whatever you passed in:
+
+x = np.asarray([1, 2, 3])
+print(x)          # [1 2 3]
+print(type(x))    # <class 'numpy.ndarray'>
+
+Already an array? Same object comes back
+
+a = np.array([1, 2, 3])
+b = np.asarray(a)
+print(a is b)     # True  → nothing was copied or changed
+
+(Its relative np.array() makes a new copy by default. That's the main difference between the two.)
+
+---
+
+In your line
+
+np.asarray(label_encoder_gender.fit_transform(data['Gender']))
+
+┌─────────────────────────┬────────────────────────────┬───────────────┐
+│          Step           │           Value            │     Type      │
+├─────────────────────────┼────────────────────────────┼───────────────┤
+│ Input to fit_transform  │ Female, Male, Male, …      │ pandas.Series │
+├─────────────────────────┼────────────────────────────┼───────────────┤
+│ Output of fit_transform │ [0, 1, 1, …]               │ numpy.ndarray │
+├─────────────────────────┼────────────────────────────┼───────────────┤
+│ Input to np.asarray     │ [0, 1, 1, …]               │ numpy.ndarray │
+├─────────────────────────┼────────────────────────────┼───────────────┤
+│ Output of np.asarray    │ [0, 1, 1, …] (same object) │ numpy.ndarray │
+└─────────────────────────┴────────────────────────────┴───────────────┘
+
+So when the code runs, np.asarray does nothing here. It gets a NumPy array and returns the same one.
+
+Then why add it?
+
+It's only there for the editor (Pylance):
+
+- fit_transform's type hint says it returns "something ArrayLike", which is too vague for pandas to accept.
+- np.asarray's type hint says it returns a numpy.ndarray, which pandas accepts.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+data["Gender"] = np.asarray(label_encoder_gender.fit_transform(data['Gender'])) , here we are getting np.array as output , can we replace pandas.Series type data['Gender'] column with np.array type data
+
+Yes, you can. But the column doesn't become an np.array. It stays a pandas Series.
+
+Why
+
+A DataFrame column is always a Series. So when you assign a NumPy array to a column:
+
+1. Pandas takes the array's values.
+2. It wraps them in a new Series.
+3. That Series replaces the old column.
+
+print(type(data['Gender']))   # Series   (values: Female, Male, ...)
+
+data["Gender"] = np.asarray(label_encoder_gender.fit_transform(data['Gender']))
+
+print(type(data['Gender']))   # Series   (values: 0, 1, ...)  ← still a Series
+
+The container (Series) stays the same. Only the values inside it change, from words to numbers.
+
+data['Gender'].to_numpy()          # array([0, 1, 1, ...])
+type(data['Gender'].to_numpy())    # <class 'numpy.ndarray'>
+
+Summary
+
+┌───────────────────────┬───────────────────────────────┐
+│                       │             Type              │
+├───────────────────────┼───────────────────────────────┤
+│ data['Gender'] before │ pandas.Series (holds strings) │
+├───────────────────────┼───────────────────────────────┤
+│ What you assign       │ numpy.ndarray (holds numbers) │
+├───────────────────────┼───────────────────────────────┤
+│ data['Gender'] after  │ pandas.Series (holds numbers) │
+└───────────────────────┴───────────────────────────────┘
+
+It only works if the array has one value per row. fit_transform returns exactly that, so you're fine.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+what's the difference between data[['Geography']] , vs data['Gender']
+
+Ignore the column names for a moment. The real difference is single vs double square brackets:
+
+┌─────────────────────┬─────────────────────────────────────┬─────────────────────┐
+│        Code         │               You get               │        Shape        │
+├─────────────────────┼─────────────────────────────────────┼─────────────────────┤
+│ data['Gender']      │ Series (one column of values)       │ 1D, e.g. (10000,)   │
+├─────────────────────┼─────────────────────────────────────┼─────────────────────┤
+│ data[['Geography']] │ DataFrame (a table with one column) │ 2D, e.g. (10000, 1) │
+└─────────────────────┴─────────────────────────────────────┴─────────────────────┘
+
+Example
+
+print(type(data['Geography']))     # <class 'pandas.core.series.Series'>
+print(data['Geography'].shape)     # (10000,)
+
+print(type(data[['Geography']]))   # <class 'pandas.core.frame.DataFrame'>
+print(data[['Geography']].shape)   # (10000, 1)
+
+Why the double brackets?
+
+The inner brackets are a Python list of column names. When you pass pandas a list, it gives you back a table (DataFrame) with those columns:
+
+data[['Geography']]                    # list with 1 name  → table with 1 column
+data[['Geography', 'Gender', 'Age']]   # list with 3 names → table with 3 columns
+
+Why it matters in your project
+
+The two encoders expect different shapes:
+
+# LabelEncoder expects 1D → single brackets
+label_encoder_gender.fit_transform(data['Gender'])
+
+# OneHotEncoder expects 2D → double brackets
+onehot_encoder_geo.fit_transform(data[['Geography']])
+
+If you give OneHotEncoder single brackets, you get an error like:
+
+ValueError: Expected 2D array, got 1D array instead
+
+That's why your course code uses [['Geography']] for the one-hot step.
+
+Simple rule: data['col'] gives you one column as a list of values, and data[['col']] gives you one column as a table
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+geo_encoder = onehot_encoder_geo.fit_transform(data[['Geography']]) , this method accepts input MatrixLike , but we are passing the Dataframe , both are same?
+
+They're not the same thing, but a DataFrame fits into MatrixLike. It's the same idea as ArrayLike and Series from before.
+
+What fits MatrixLike
+
+pd.DataFrame(...)                    # DataFrame (rows × columns)
+np.array([[1, 2], [3, 4]])           # 2D NumPy array
+[[1, 2], [3, 4]]                     # list of lists
+scipy.sparse.csr_matrix(...)         # sparse matrix
+
+data[['Geography']] is a DataFrame with shape (10000, 1), so it's 2D and qualifies.
+
+ArrayLike vs MatrixLike
+
+┌────────────┬───────────────────────────────────┬──────────────────────────────────┬─────────────────────────────┐
+│ Type hint  │               Means               │               Fits               │           Used by           │
+├────────────┼───────────────────────────────────┼──────────────────────────────────┼─────────────────────────────┤
+│ ArrayLike  │ Any list-like data (in practice,  │ Series, list, 1D NumPy array     │ LabelEncoder.fit_transform  │
+│            │ 1D here)                          │                                  │                             │
+├────────────┼───────────────────────────────────┼──────────────────────────────────┼─────────────────────────────┤
+│ MatrixLike │ Table-shaped (2D) data            │ DataFrame, 2D NumPy array, list  │ OneHotEncoder.fit_transform │
+│            │                                   │ of lists                         │                             │
+└────────────┴───────────────────────────────────┴──────────────────────────────────┴─────────────────────────────┘
+
+That's why data['Geography'] (a Series, 1D) is the wrong shape for OneHotEncoder, and data[['Geography']] (a DataFrame, 2D) is the right one.
+
+What comes out
+
+geo_encoder = onehot_encoder_geo.fit_transform(data[['Geography']])
+print(type(geo_encoder))
+# <class 'scipy.sparse._csr.csr_matrix'>   ← a sparse matrix (by default)
+
+By default OneHotEncoder returns a sparse matrix, which stores only the 1s to save memory. To see it as a normal table:
+
+geo_encoder.toarray()
+# [[1, 0, 0],    ← France
+#  [0, 0, 1],    ← Spain
+#  [1, 0, 0]]    ← France
+
+Or create the encoder with OneHotEncoder(sparse_output=False) to get a plain NumPy array straight away.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+geo_encoder = onehot_encoder_geo.fit_transform(data[['Geography']]) what is the use of this function, what it does? , why do we use it?
+
+What it does, simply
+
+The Geography column has country names. The model needs numbers, so this line turns each country into a row of 0s and 1s, with one column per country.
+
+Geography            France  Germany  Spain
+France      →          1        0       0
+Spain       →          0        0       1
+Germany     →          0        1       0
+France      →          1        0       0
+
+Each row has exactly one 1, in the column for that customer's country. Everything else is 0. That's where the name comes from: one "hot" (1) spot.
+
+Step by step
+
+geo_encoder = onehot_encoder_geo.fit_transform(data[['Geography']])
+
+1. data[['Geography']] takes the Geography column as a 2D table.
+2. fit: the encoder finds the different countries (France, Germany, Spain) and makes one column for each.
+3. transform: for every row, it puts a 1 under that row's country and 0 everywhere else.
+4. The result is saved in geo_encoder (a sparse matrix by default).
+
+Why not just use LabelEncoder like for Gender?
+
+LabelEncoder would give:
+France → 0,  Germany → 1,  Spain → 2
+
+That causes a problem. The model treats these as real numbers, so it would think:
+- Spain (2) is "bigger" than France (0)
+- Germany (1) sits "between" France and Spain
+- Spain is "twice" Germany
+
+Then why was LabelEncoder OK for Gender?
+
+Gender here has only two values: 0 and 1. With just two values there's no "middle" and no false ordering to worry about, so a single 0/1 column works fine.
+
+┌───────────┬──────────────────┬───────────────┬────────────────────────────────────┐
+│  Column   │ Different values │    Encoder    │                Why                 │
+├───────────┼──────────────────┼───────────────┼────────────────────────────────────┤
+│ Gender    │ 2                │ LabelEncoder  │ A single 0/1 column is enough      │
+├───────────┼──────────────────┼───────────────┼────────────────────────────────────┤
+│ Geography │ 3                │ OneHotEncoder │ Avoids a fake order like 0 < 1 < 2 │
+└───────────┴──────────────────┴───────────────┴────────────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+explain get_feature_names_out in very simple words
+
+Simple answer
+
+get_feature_names_out gives you the names of the new columns that the encoder created.
+
+Why you need it
+
+After one-hot encoding, you get only numbers, with no column names:
+
+geo_encoder.toarray()
+# [[1, 0, 0],
+#  [0, 0, 1],
+#  [0, 1, 0]]
+
+Looking at this, you can't tell which column is which country.
+
+What it gives you
+
+onehot_encoder_geo.get_feature_names_out(['Geography'])
+# ['Geography_France', 'Geography_Germany', 'Geography_Spain']
+
+The encoder remembers which country it put in each column, so this function just returns those labels in the right order.
+
+Each name is built as original column name + _ + value:
+Geography + _ + France  →  Geography_France
+
+Putting names and numbers together
+
+geo_df = pd.DataFrame(
+    geo_encoder.toarray(),                                       # the numbers
+    columns=onehot_encoder_geo.get_feature_names_out(['Geography'])  # the names
+)
+
+   Geography_France  Geography_Germany  Geography_Spain
+0         1                  0                 0
+1         0                  0                 1
+2         0                  1                 0
+
+The table now shows which column belongs to which country.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+geo_encoder_df = pd.DataFrame(geo_encoder,columns=geo_feature_names)
+print(geo_encoder_df)
+
+      Geography_France  Geography_Germany  Geography_Spain
+0                  1.0                0.0              0.0
+1                  0.0                0.0              1.0
+2                  1.0                0.0              0.0
+3                  1.0                0.0              0.0
+4                  0.0                0.0              1.0
+...                ...                ...              ...
+9995               1.0                0.0              0.0
+9996               1.0                0.0              0.0
+9997               1.0                0.0              0.0
+9998               0.0                1.0              0.0
+9999               1.0                0.0              0.0
+
+[10000 rows x 3 columns]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+explain what we are doing in this line of code data = pd.concat([data.drop(['Geography'],axis=1),geo_encoder_df],axis=1)
+
+In simple words
+
+This line removes the text Geography column and puts the new 0/1 country columns in its place.
+
+data = pd.concat([data.drop(['Geography'], axis=1), geo_encoder_df], axis=1)
+
+Read it from the inside out.
+
+Step 1: data.drop(['Geography'], axis=1)
+
+This removes the Geography column (axis=1 = column). You don't need it any more because the 0/1 columns replace it.
+
+CreditScore  Gender  Age  ...          ← Geography is gone
+   619         0     42
+   608         0     41
+
+Step 2: geo_encoder_df
+
+This is the table you made earlier with get_feature_names_out:
+
+Geography_France  Geography_Germany  Geography_Spain
+       1                 0                 0
+       0                 0                 1
+
+Step 3: pd.concat([A, B], axis=1)
+
+concat means join tables together. With axis=1 it puts them side by side, matching rows up by index:
+
+CreditScore  Gender  Age  ...  Geography_France  Geography_Germany  Geography_Spain
+   619         0     42   ...         1                 0                 0
+   608         0     41   ...         0                 0                 1
+
+Step 4: data = ...
+
+This saves the joined table back into data.
+
+---
+
+The two axis=1s
+
+┌─────────────────────┬────────────────────────────────────────┐
+│        Where        │              axis=1 means              │
+├─────────────────────┼────────────────────────────────────────┤
+│ drop(..., axis=1)   │ Remove a column                        │
+├─────────────────────┼────────────────────────────────────────┤
+│ concat(..., axis=1) │ Join tables side by side (add columns) │
+└─────────────────────┴────────────────────────────────────────┘
+
+With axis=0, concat would stack the tables on top of each other (add rows), which isn't what you want here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+what we are doing here
+  with open('./pkl/label_encoder_gender.pkl','wb') as file:
+      pickle.dump(label_encoder_gender,file=file)
+
+  with open('./pkl/onehot_encoder_geo.pkl','wb') as file:
+      pickle.dump(onehot_encoder_geo,file=file)
+
+In simple words
+
+These lines save your two encoders to files, so you can load and reuse them later, for example in a prediction app, without fitting them again.
+
+Why save them?
+
+Earlier, each encoder learned something:
+- label_encoder_gender learned Female → 0, Male → 1
+- onehot_encoder_geo learned France → [1,0,0], Germany → [0,1,0], Spain → [0,0,1]
+
+That knowledge lives only in memory, so it's lost when the script ends. Later, when a new customer comes in through your app, their data has to be converted exactly the same way as the training data. Saving the encoders lets you reuse them as they are.
+
+Line by line
+
+with open('./pkl/label_encoder_gender.pkl', 'wb') as file:
+- open(...) opens (or creates) a file named label_encoder_gender.pkl in the pkl folder.
+- 'wb' means write binary: you write raw bytes, not text.
+- with ... as file: closes the file automatically when the block is done.
+
+    pickle.dump(label_encoder_gender, file=file)
+- pickle.dump turns the Python object into bytes and writes them to the file.
+- Think of it as freezing the object and putting it in a box.
+
+The second block does the same thing for onehot_encoder_geo.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X_train,X_test,Y_train,Y_test=train_test_split(X,Y,test_size=0.2,random_state=42) , explain what we are doing in this line of code , also train_test_split function returns a list , but we are put X_train,X_test,Y_train,Y_test 4 variables before it?
+
+Part 1: What this line does
+
+It splits your data into two parts:
+- Training set (80%): the model learns from it.
+- Test set (20%): you check the model on it afterwards. The model never sees this data during training.
+
+Why split?
+
+Think of a student preparing for an exam. If the exam used exactly the same questions as the practice book, a student who memorised the answers would score 100% without understanding anything. So the teacher keeps some questions the student has never seen for the real exam. The test set plays that role: it shows whether the model actually learned the patterns or just memorised the training data.
+
+The inputs
+
+train_test_split(X, Y, test_size=0.2, random_state=42)
+
+┌─────────────────┬─────────────────────────────────────────────────────────────────────────┐
+│    Argument     │                                 Meaning                                 │
+├─────────────────┼─────────────────────────────────────────────────────────────────────────┤
+│ X               │ The features (inputs): CreditScore, Age, Balance, ...                   │
+├─────────────────┼─────────────────────────────────────────────────────────────────────────┤
+│ Y               │ The target (answer): Exited (0 = stayed, 1 = left)                      │
+├─────────────────┼─────────────────────────────────────────────────────────────────────────┤
+│ test_size=0.2   │ Put 20% of the rows in the test set, 80% in the training set            │
+├─────────────────┼─────────────────────────────────────────────────────────────────────────┤
+│ random_state=42 │ Shuffle the same way every time, so you get the same split on every run │
+└─────────────────┴─────────────────────────────────────────────────────────────────────────┘
+
+With 10,000 rows:
+
+┌──────────┬───────────────────────┬───────┐
+│ Variable │       Contains        │ Rows  │
+├──────────┼───────────────────────┼───────┤
+│ X_train  │ Features for training │ 8,000 │
+├──────────┼───────────────────────┼───────┤
+│ X_test   │ Features for testing  │ 2,000 │
+├──────────┼───────────────────────┼───────┤
+│ Y_train  │ Answers for training  │ 8,000 │
+├──────────┼───────────────────────┼───────┤
+│ Y_test   │ Answers for testing   │ 2,000 │
+└──────────┴───────────────────────┴───────┘
+
+The rows stay matched: row 5 of X_train goes with row 5 of Y_train.
+
+(42 has no special meaning. Any fixed number works. Without random_state, each run would shuffle differently and your results would change slightly every time.)
+
+---
+
+Part 2: One list, four variables?
+
+You're right that the function returns one list. It holds four items:
+
+result = train_test_split(X, Y, test_size=0.2, random_state=42)
+print(type(result))   # <class 'list'>
+print(len(result))    # 4
+# result = [X_train, X_test, Y_train, Y_test]
+
+When you write four variables on the left, Python unpacks the list, giving the first item to the first variable, the second item to the second variable, and so on:
+
+X_train, X_test, Y_train, Y_test = result
+# same as:
+X_train = result[0]
+X_test  = result[1]
+Y_train = result[2]
+Y_test  = result[3]
+
+Unpacking in plain Python
+
+a, b, c = [10, 20, 30]
+print(a)   # 10
+print(b)   # 20
+print(c)   # 30
+
+It works with any list or tuple, as long as the number of variables matches the number of items:
+
+a, b = [10, 20, 30]
+# ValueError: too many values to unpack (expected 2)
+
+Watch the order
+
+The function always returns X_train, X_test, Y_train, Y_test, in that order. If you put the variable names in a different order, Python won't complain, but your variables will hold the wrong data:
+
+X_train, Y_train, X_test, Y_test = train_test_split(...)   # wrong order
+# Y_train would actually hold the X test data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+explain scaler = StandardScaler()
+  X_train = scaler.fit_transform(X_train)
+  X_test = scaler.transform(X_test) piece of code , what it does? Why do we use it?
+
+
+In simple words
+
+This code puts all your columns on the same scale, so that no column dominates just because its numbers are bigger.
+
+The problem
+
+Your columns have very different ranges:
+
+┌─────────────┬────────────────┐
+│   Column    │ Typical values │
+├─────────────┼────────────────┤
+│ Age         │ 18 to 92       │
+├─────────────┼────────────────┤
+│ CreditScore │ 350 to 850     │
+├─────────────┼────────────────┤
+│ Balance     │ 0 to 250,000   │
+├─────────────┼────────────────┤
+│ Gender      │ 0 or 1         │
+└─────────────┴────────────────┘
+
+The fix: standardization
+
+StandardScaler changes each column so that:
+- its average becomes 0
+- its spread (standard deviation) becomes 1
+
+The formula, applied to every value:
+
+new value = (value − column average) / column standard deviation
+
+Small example (Age)
+
+Say the ages are [20, 30, 40, 50, 60].
+- Average = 40
+- Standard deviation ≈ 14.1
+
+20 → (20 − 40) / 14.1 = −1.41
+30 → (30 − 40) / 14.1 = −0.71
+40 → (40 − 40) / 14.1 =  0.00
+50 → (50 − 40) / 14.1 =  0.71
+60 → (60 − 40) / 14.1 =  1.41
+
+After scaling, the values roughly mean:
+- 0 = average
+- a positive number = above average (1.41 ≈ "1.41 standard deviations above")
+- a negative number = below average
+
+Balance gets the same treatment, so 250,000 might become something like 2.0. All columns now live in the same small range, roughly −3 to +3.
+
+Line by line
+
+scaler = StandardScaler()
+This creates an empty scaler. It hasn't learned anything yet.
+
+X_train = scaler.fit_transform(X_train)
+- fit: learns the average and standard deviation of each column from the training data.
+- transform: applies the formula to scale the training data.
+
+X_test = scaler.transform(X_test)
+- Only transform, with no fit. It scales the test data using the averages and standard deviations it learned from the training data.
+
+
+
+
+
+
+
+
+
+
