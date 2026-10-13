@@ -143,3 +143,58 @@ with open('./pkl/scaler.pkl','wb') as file:
     pickle.dump(scaler,file=file)
 
 print('===============================DiVide the dataset into indepent and dependent features ============================\n')
+
+
+
+
+
+
+
+
+
+
+##### ### ANN Implementation
+import tensorflow as tf
+from keras import Sequential , Input
+from keras.layers import Dense
+from keras.optimizers import Adam
+from keras.losses import BinaryCrossentropy
+import datetime
+
+
+## Build Our ANN Model
+print('===============================Build Our ANN Model ============================\n')
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(64,activation="relu"),
+    Dense(32, activation='relu'),       # HL2
+    Dense(1, activation='sigmoid')
+])
+
+print(model.summary())
+
+print('===============================Build Our ANN Model ============================\n')
+
+
+
+
+
+
+
+
+
+## compile the model
+
+print('===============================compile the model ============================\n')
+opt = Adam(learning_rate=0.01)
+loss = BinaryCrossentropy()
+model.compile(optimizer=opt,loss=loss,metrics=['accuracy'])
+
+print('===============================compile the model ============================\n')
+
+
+
+
+
+

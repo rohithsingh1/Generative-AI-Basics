@@ -1,0 +1,212 @@
+1. Sequential([...])
+
+Sequential only works when the data follows one straight path:
+
+✅ Sequential works:            ❌ Sequential can't do this:
+
+   Input                          Image    Text
+     ↓                              ↓        ↓
+   Layer                          Layer    Layer
+     ↓                               \      /
+   Layer                              Merge
+     ↓                                  ↓
+   Output                             Output
+
+The right-hand picture has two inputs that join together. For that you need the Functional API. For your project with one input, one path and one output, Sequential is all you need.
+
+
+2. Input(shape=(X_train.shape[1],))
+
+Input(shape=(X_train.shape[1],)) in very simple words
+
+The idea: a doorman telling the kitchen what's coming
+
+Picture a restaurant. Before food arrives, the doorman tells the kitchen:
+
+▎ "Every order will have 12 items."
+
+The doorman doesn't cook anything. They just tell the kitchen what to get ready for.
+
+Input is that doorman. It does no learning and no maths. It just tells the model: "Every customer comes with 12 numbers."
+
+---
+
+Example 1: what one customer looks like
+
+Your data is a big table:
+
+┌──────────────────┬────────┬─────┬────────┬─────────┬─────┬───────────┐
+│   CreditScore    │ Gender │ Age │ Tenure │ Balance │ ... │ Geo_Spain │
+├──────────────────┼────────┼─────┼────────┼─────────┼─────┼───────────┤
+│ 619              │ 0      │ 42  │ 2      │ 0.0     │ ... │ 0         │
+├──────────────────┼────────┼─────┼────────┼─────────┼─────┼───────────┤
+│ 608              │ 0      │ 41  │ 1      │ 83807   │ ... │ 1         │
+├──────────────────┼────────┼─────┼────────┼─────────┼─────┼───────────┤
+│ ... (8,000 rows) │        │     │        │         │     │           │
+└──────────────────┴────────┴─────┴────────┴─────────┴─────┴───────────┘
+
+- Number of rows = 8,000 customers
+- Number of columns = 12 features
+
+X_train.shape      # (8000, 12)  → (rows, columns)
+X_train.shape[0]   # 8000        → how many customers
+X_train.shape[1]   # 12          → how many features per customer
+
+So X_train.shape[1] is just a way of saying 12 without typing it by hand.
+
+---
+
+Example 2: why we skip the 8,000
+
+The model only needs to know what one customer looks like, not how many customers there are.
+
+Think of a mould for an ice tray:
+- The mould only cares about the shape of one ice cube.
+- You can make 10 cubes or 10,000 cubes with the same mould.
+
+The same goes here:
+- Training on 8,000 customers ✅
+- Testing on 2,000 customers ✅
+- Predicting for 1 new customer ✅
+
+All of these work, because each customer still has 12 numbers.
+
+---
+
+Example 3: why (12,) has a comma
+
+12      # just a number
+(12)    # still just a number (Python ignores the brackets)
+(12,)   # a tuple: "a list of 12 values"   ✅
+
+The comma tells Python "this is a shape, not a plain number." Remember it as: (12,) = one row of 12 numbers.
+
+---
+
+Why the first layer needs this
+
+model = Sequential([
+    Input(shape=(12,)),            # doorman: "12 numbers coming"
+    Dense(64, activation='relu'),  # kitchen: "OK, I'll prepare for 12 inputs"
+    Dense(1, activation='sigmoid')
+])
+
+Each of the 64 neurons in the first Dense layer needs one weight for each input number:
+
+12 inputs × 64 neurons = 768 weights
+
+Without Input, the layer wouldn't know whether to make room for 12 inputs, 5 or 100. It needs that number to build itself.
+
+
+3. Dense(...)
+
+What it is: a fully connected layer. Every neuron in it is connected to every value coming from the layer before. "Dense" means densely connected.
+
+Parameters used in your code
+
+┌────────────────────────────┬─────────────────────────────────────────────────┐
+│         Parameter          │                     Meaning                     │
+├────────────────────────────┼─────────────────────────────────────────────────┤
+│ First argument (64, 32, 1) │ units: how many neurons the layer has           │
+├────────────────────────────┼─────────────────────────────────────────────────┤
+│ activation=                │ Which function to apply to each neuron's result │
+└────────────────────────────┴─────────────────────────────────────────────────┘
+
+4. Dense(64, activation="relu"): hidden layer 1
+
+- 64: 64 neurons. Each looks at all 12 inputs and learns its own pattern, for example "older customers with a high balance in Germany".
+- activation="relu": see below.
+
+What ReLU does
+
+ReLU (Rectified Linear Unit) is very simple:
+
+if value < 0  → output 0
+if value ≥ 0  → output the value unchanged
+
+−3 → 0
+−1 → 0
+ 0 → 0
+ 2 → 2
+ 5 → 5
+
+Why ReLU in particular? It's fast to compute, it works well in practice, and it's the standard choice for hidden layers.
+
+5. Dense(32, activation='relu'): hidden layer 2
+
+- 32: 32 neurons. Each looks at all 64 outputs from layer 1 and combines the simple patterns into more complex ones.
+- relu: same reason as above.
+
+Why 64 and then 32?
+
+There's no exact rule. These are choices you can tune. Common habits:
+- Use powers of 2 (16, 32, 64, 128).
+
+More neurons means more learning power, but also more risk of memorising the training data (overfitting). For a small table like this, 64 → 32 is a reasonable size.
+
+6. Dense(1, activation='sigmoid'): output layer
+
+- 1: one neuron, because you want one answer
+- activation='sigmoid': turns any number into a value between 0 and 1.
+
+What Sigmoid does
+
+very negative → close to 0
+0             → 0.5
+very positive → close to 1
+
+−5 → 0.007
+ 0 → 0.5
+ 2 → 0.88
+ 5 → 0.993
+
+
+Why use it here: this is a yes/no (binary) problem, so you want a probability:
+
+output = 0.85 → 85% chance the customer leaves → predict 1 (Exited)
+output = 0.10 → 10% chance                     → predict 0 (Stayed)
+
+Usually you use 0.5 as the cut-off: above 0.5 means "will leave".
+
+7. How many numbers does the model learn?
+
+Each Dense layer learns (inputs × neurons) weights + (neurons) biases:
+
+┌──────────┬──────────────┬────────────┐
+│  Layer   │ Calculation  │ Parameters │
+├──────────┼──────────────┼────────────┤
+│ Dense 64 │ 12 × 64 + 64 │ 832        │
+├──────────┼──────────────┼────────────┤
+│ Dense 32 │ 64 × 32 + 32 │ 2,080      │
+├──────────┼──────────────┼────────────┤
+│ Dense 1  │ 32 × 1 + 1   │ 33         │
+├──────────┼──────────────┼────────────┤
+│ Total    │              │ 2,945      │
+└──────────┴──────────────┴────────────┘
+
+You can confirm it with:
+model.summary()
+
+8. Quick summary
+
+┌────────────────────┬─────────────────────────────┬────────────────────────────────────────────────────┐
+│        Code        │         What it is          │                        Why                         │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ Sequential         │ Stack of layers in a line   │ The simplest way to build a straight-chain network │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ Input(shape=(12,)) │ Shape of one customer       │ Tells the first layer how many inputs to expect    │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ Dense(64, relu)    │ 64 neurons, fully connected │ Learns many simple patterns                        │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ Dense(32, relu)    │ 32 neurons                  │ Combines them into more complex patterns           │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ Dense(1, sigmoid)  │ 1 neuron, output 0 to 1     │ Gives the probability that the customer leaves     │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ relu               │ Negative → 0                │ Lets the network learn non-straight patterns       │
+├────────────────────┼─────────────────────────────┼────────────────────────────────────────────────────┤
+│ sigmoid            │ Squashes to 0 to 1          │ Turns the result into a probability                │
+└────────────────────┴─────────────────────────────┴────────────────────────────────────────────────────┘
+
+
+A Dense layer is a group of neurons that each see every input, multiply each one by its own "importance knob" (weight), add a bias, and pass the result through an activation. ReLU in the hidden layers lets them learn curvy, complex patterns, and sigmoid at the end turns the result into a probability.
+
