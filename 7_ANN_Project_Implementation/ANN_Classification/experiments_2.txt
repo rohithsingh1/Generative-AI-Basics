@@ -151,14 +151,7 @@ More neurons means more learning power, but also more risk of memorising the tra
 
 What Sigmoid does
 
-very negative → close to 0
-0             → 0.5
-very positive → close to 1
-
-−5 → 0.007
- 0 → 0.5
- 2 → 0.88
- 5 → 0.993
+Sigmoid takes the last neuron's score, which can be any number, and turns it into a percentage from 0% to 100%: negative scores give a low chance, 0 gives 50%, positive scores give a high chance. That's how the model can say "88% chance this customer leaves."
 
 
 Why use it here: this is a yes/no (binary) problem, so you want a probability:
@@ -209,4 +202,25 @@ model.summary()
 
 
 A Dense layer is a group of neurons that each see every input, multiply each one by its own "importance knob" (weight), add a bias, and pass the result through an activation. ReLU in the hidden layers lets them learn curvy, complex patterns, and sigmoid at the end turns the result into a probability.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

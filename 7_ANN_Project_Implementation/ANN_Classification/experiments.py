@@ -40,6 +40,12 @@ print('===============================Preprocess data part 1 ===================
 
 ## Encode categorical variables
 print('===============================Encode categorical variables 1 ============================\n')
+'''
+These lines make a translator, show it the Gender column so it learns Female → 0 and Male → 1, and 
+then replace the words in that column with those numbers.
+
+The computer only understands numbers. So this code changes "Female" to 0 and "Male" to 1 in the Gender column.
+'''
 label_encoder_gender = LabelEncoder()
 # print(data['Gender'])
 # print(type(data['Gender']))
@@ -72,10 +78,6 @@ print(geo_feature_names)
 geo_encoder_df = pd.DataFrame(geo_encoder,columns=geo_feature_names)
 print(geo_encoder_df)
 print('===============================Onehot encode Geography ============================\n')
-
-
-
-
 
 
 
@@ -164,7 +166,26 @@ import datetime
 
 ## Build Our ANN Model
 print('===============================Build Our ANN Model ============================\n')
+'''
+ReLU: used in the middle (hidden) layers
 
+Rule: if the number is negative, make it 0. Otherwise keep it as it is.
+
+−5 → 0
+−1 → 0
+ 3 → 3
+ 8 → 8
+
+Sigmoid: used in the last (output) layer
+
+Rule: squeeze any number into the range 0 to 1.
+
+−5 → 0.01
+ 0 → 0.5
+ 2 → 0.88
+ 5 → 0.99
+
+'''
 model = Sequential([
     Input(shape=(X_train.shape[1],)),
     Dense(64,activation="relu"),
@@ -196,5 +217,26 @@ print('===============================compile the model ========================
 
 
 
+
+
+
+
+## Set up the Tensorboard
+from keras.callbacks import EarlyStopping , TensorBoard
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+tensorflow_callback = TensorBoard(log_dir=log_dir,histogram_freq=1)
+
+## Set up Early Stopping
+early_stopping_callback = EarlyStopping(monitor="val_loss",patience=10,restore_best_weights=True)
+
+
+
+
+
+### Train the model
+history = model.fit(X_train,Y_train,validation_data=(X_test,Y_test),epochs=100,callbacks=[tensorflow_callback,early_stopping_callback])
+
+print(history)
 
 
