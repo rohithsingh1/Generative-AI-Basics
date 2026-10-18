@@ -1,0 +1,26 @@
+7_ANN_Project_Implementation/ANN_Classification/training_data/Churn_Modelling.csv
+  s_06bd93f98292df::t_6394247c38d190 1-10001
+7_ANN_Project_Implementation/ANN_Classification/training_data/Churn_Modelling_original.csv
+  s_06bd93f98292df::t_6394247c38d190 1-10001
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0bef2ab345c1556741e425400fdbdc1218b8c8c9",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_06bd93f98292df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "26565086-82ad-40ce-9047-09abebdadba9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
