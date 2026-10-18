@@ -207,6 +207,8 @@ A Dense layer is a group of neurons that each see every input, multiply each one
 
 
 
+https://claude.ai/artifact/3XXdqDJ365KKPHzEjeJvBk?sk=klZToK6zCDFZfSTtxM_BeA
+
 
 
 
