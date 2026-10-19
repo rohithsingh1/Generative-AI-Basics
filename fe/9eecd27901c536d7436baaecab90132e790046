@@ -1,0 +1,14 @@
+requirements.txt
+  h_66f393e93fb8bf 6-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fe9eecd27901c536d7436baaecab90132e790046",
+  "prompts": {},
+  "humans": {
+    "h_66f393e93fb8bf": {
+      "author": "rohithsingh <rohithsinghthakur3@gmail.com>"
+    }
+  }
+}
