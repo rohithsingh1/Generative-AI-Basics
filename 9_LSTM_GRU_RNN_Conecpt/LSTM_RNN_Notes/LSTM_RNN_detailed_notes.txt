@@ -1,0 +1,795 @@
+📄 Page 2: Problems with RNN → Long-Term Dependency
+
+Drawing 2: "Gap is less" ✅ (RNN works fine)
+
+Task (written on the right): predict the next word in a sentence.
+
+▎ "The color of the sky is ___" → blue
+
+- To guess "blue", the model needs the word "sky" (the green arrow points from "blue" back to "sky").
+- "sky" is right next to the blank, so the gap is small.
+- In the drawing, x₀, x₁ (glowing blue) are the important words, and h₃ (glowing) is where the answer is needed. They're only a few steps apart.
+- The RNN's notepad still remembers "sky", so ✅ it works.
+
+"Further context" (green) just means the word that gives the clue.
+
+Drawing 3: "Huge gap" ❌ (RNN fails)
+
+▎ "I grew up in India …… (many, many words) …… I speak fluent ___"
+
+- The blank needs the name of a language (→ Hindi).
+- The clue is "India" (boxed in red), which is very far back.
+- In the drawing, the important words x₀, x₁ (red glow, yellow boxes) are at the start, and the answer is needed at hₜ₊₁ (far right, red glow).
+- By then, the notepad has been rewritten so many times that "India" has faded away.
+
+Huge gap → Long-Term Dependency.
+"Long-term dependency" = the answer depends on a word that was long ago in the sentence. A plain RNN is bad at this.
+
+
+📄 Page 3: Basic representation of RNN vs LSTM RNN
+
+Left picture: a plain RNN ("contains a single layer")
+
+- Each green box has one small layer inside: just tanh.
+- Only one line goes from box to box at the top: the notepad (hₜ).
+
+Your hand-drawing below it:
+ t=1          t=2          t=3
+ [box] ──O₁──→ [box] ───→ [box]
+   ↑     Wh      ↑          ↑
+   Wi           Wi          Wi
+  x₁₁          x₁₂         x₁₃
+- x₁₁, x₁₂, x₁₃ = word 1, word 2, word 3 of sentence 1
+- Wi = the word weights (input weights), the same Wi at every step
+- Wh = the memory weights (notepad → next step)
+- O₁ = the output (notepad) from step 1, passed to step 2
+
+Right picture: an LSTM ("contains four interacting layers")
+
+- Each box has 4 small layers inside: σ, σ, tanh, σ (3 sigmoids + 1 tanh).
+- Two lines go from box to box at the top:
+  a. the top line (your yellow line) = Long-Term Memory, also called the Memory Cell (Cₜ)
+  b. the bottom line = Short-Term Memory = the hidden state (hₜ), the same notepad as in a normal RNN
+
+LSTM RNN ──→ Long-Term Memory   (memory cell, Cₜ, the top line)
+         └─→ Short-Term Memory  (hidden state, hₜ, the bottom line)
+
+🧳 The Conveyor Belt (Luggage) idea, the key picture
+
+Your note: "Conveyance Belt : Luggages", with a yellow line, small boxes on it, and a "Human" taking one off.
+
+Think of the luggage belt at an airport:
+- The belt = long-term memory (memory cell). It runs straight through all the time steps.
+- The bags on the belt = pieces of information ("we're talking about India", "the subject is a woman", …).
+- At each step, a person (Human) stands by the belt and can:
+  - ❌ take a bag off = forget information that's no longer useful
+  - ➕ put a new bag on = add new important information
+- Bags that nobody touches ride along all the way to the end, safely.
+
+
+📄 Page 4: LSTM Architecture
+
+Top-left: "Basic Architecture"
+
+One LSTM box, with:
+- xₜ going in at the bottom (the current word)
+- hₜ coming out at the top (the output)
+- inside: σ σ tanh σ (4 small layers), plus the ⊗ (multiply) and ⊕ (add) circles
+
+The LSTM box sends out two things each step: long-term memory and short-term memory (hₜ₋₁).
+
+Top-right: the full LSTM diagram (with labels)
+
+You split it with red dashed lines into 4 parts, left to right:
+
+┌──────┬──────────────────┬───────────┬───────────────────────────────────────────────┐
+│ Part │       Name       │  Symbol   │              Job (simple words)               │
+├──────┼──────────────────┼───────────┼───────────────────────────────────────────────┤
+│ 1    │ Forget gate      │ Fₜ (σ)    │ Which old bags should come off the belt?      │
+├──────┼──────────────────┼───────────┼───────────────────────────────────────────────┤
+│ 2    │ Input gate       │ Iₜ (σ)    │ How much of the new info should go on?        │
+├──────┼──────────────────┼───────────┼───────────────────────────────────────────────┤
+│ 3    │ Candidate memory │ C̃ₜ (tanh) │ What new info could go on the belt?           │
+├──────┼──────────────────┼───────────┼───────────────────────────────────────────────┤
+│ 4    │ Output gate      │ Oₜ (σ)    │ What should we show as output (hₜ) this step? │
+└──────┴──────────────────┴───────────┴───────────────────────────────────────────────┘
+
+- Memory Cₜ₋₁ comes in at the top left and leaves as Cₜ at the top right (that's the belt).
+- Hidden state Hₜ₋₁ comes in at the bottom left and leaves as Hₜ (the short-term notepad).
+- Input Xₜ is the current word (your red arrow).
+
+The legend: what the symbols mean
+
+┌─────────────────────┬───────────────────┬───────────────────────────────────────────────────────────────────────┐
+│       Symbol        │       Name        │                                Meaning                                │
+├─────────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────────┤
+│ 🟨 yellow box       │ Neural Network    │ a small Dense layer, like Dense(..., activation='sigmoid'). It has    │
+│                     │ Layer             │ weights to learn.                                                     │
+├─────────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────────┤
+│ ⚪ pink circle      │ Pointwise         │ simple maths done position by position (× or + or tanh). No weights.  │
+│                     │ Operation         │                                                                       │
+├─────────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────────┤
+│ →                   │ Vector Transfer   │ a list of numbers moving along the line                               │
+├─────────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────────┤
+│ ≻ (two lines        │ Concatenate       │ glue two lists into one                                               │
+│ joining)            │                   │                                                                       │
+├─────────────────────┼───────────────────┼───────────────────────────────────────────────────────────────────────┤
+│ ≺ (one line         │ Copy              │ send the same list to two places                                      │
+│ splitting)          │                   │                                                                       │
+└─────────────────────┴───────────────────┴───────────────────────────────────────────────────────────────────────┘
+
+"Combining 2 vectors" = Concatenate (gluing)
+
+hₜ₋₁ = [1, 2, 3]
+xₜ   = [2, 3, 4]
+Concatenate = put one list right after the other:
+[hₜ₋₁, xₜ] = [1, 2, 3, 2, 3, 4]    ← 6 numbers
+
+"Duplicate copy" = the same list is copied and sent to several places. The combined [hₜ₋₁, xₜ] is sent to all 4 gates.
+
+
+Pointwise operations (the pink circles)
+
+V1 = [1, 2, 3]
+V2 = [4, 5, 6]
+"Pointwise" = pair up numbers at the same position (the yellow boxes you drew around 1&4, 2&5, 3&6).
+
+⊗ Multiply:
+[1×4, 2×5, 3×6] = [4, 10, 18]
+⊕ Add:
+[1+4, 2+5, 3+6] = [5, 7, 9]
+tanh (on one list), squeezing each number by itself:
+[tanh(1), tanh(2), tanh(3)] = [0.76, 0.96, 0.995]
+⚠️ This is not the dot product from before (where everything is added into one number). Pointwise keeps the same length: 3 in → 3 out.
+
+
+The memory cell line: "Removing context" and "Adding context"
+
+The picture with the belt highlighted:
+Cₜ₋₁ ──── ⊗ ──────── ⊕ ────→ Cₜ
+          ↑           ↑
+   Removing context   Adding context
+   (forget gate)      (input gate + candidate)
+- Cₜ₋₁ = the belt coming in (old long-term memory)
+- ⊗ multiply = removing context, where bags get taken off
+- ⊕ add = adding context, where new bags get put on
+- Cₜ = the belt going out (new long-term memory)
+
+Purple notes: ⊗, ⊕, tanh are the only pointwise operations used.
+
+
+🚪 The Forget Gate (the main lesson of page 4)
+
+The formula
+
+fₜ = σ( W_f · [hₜ₋₁, xₜ] + b_f )
+
+┌────────────┬─────────────────────────────────────────────────────────────────────────────────┐
+│   Piece    │                                     Meaning                                     │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ hₜ₋₁       │ hidden state of the previous time step (the short-term notepad) ← your note     │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ xₜ         │ word passed as input in the current time step ← your note                       │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ [hₜ₋₁, xₜ] │ glue them together (concatenate)                                                │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ W_f        │ the forget gate's weights (the "f" stands for forget). Learned during training. │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ b_f        │ the forget gate's bias                                                          │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ σ          │ sigmoid, which squeezes each number to 0 … 1                                    │
+├────────────┼─────────────────────────────────────────────────────────────────────────────────┤
+│ fₜ         │ the result: a list of numbers between 0 and 1, one per slot on the belt         │
+└────────────┴─────────────────────────────────────────────────────────────────────────────────┘
+
+This is the same recipe as the SimpleRNN slot. The only differences are that it uses sigmoid instead of tanh, 
+and the output is used as a keep/forget dial.
+
+
+What 0 and 1 mean
+
+Each number in fₜ is a dial for one slot on the belt:
+1.0  → KEEP this memory fully       ✅
+0.5  → keep HALF of it
+0.0  → FORGET it completely          ❌
+
+
+📄 Page 2: Inside the Forget Gate
+
+Part 1: The drawing (a tiny neural network)
+
+Your drawing, from bottom to top:
+
+                       ↑ fₜ  [ _  _  _ ]   1×3   → values between [0 – 1]
+                 σ (  [ b→○    b→○    b→○ ] )     ← 3 neurons (each has a bias b)
+                       ╱│╲  ╱│╲  ╱│╲              ← lots of lines = weights (7×3)
+ hₜ₋₁ →  ○   ○   ○        ○   ○   ○   ○           ← 7 inputs (1×7)
+         └─ 3d ─┘        └──── 4d ────┘
+          (white)            (orange)
+                     t = 2
+
+Bottom row: 7 circles = the input
+
+- 3 white circles = hₜ₋₁ (short-term memory, 3d = 3 numbers) → [1, 2, 4]
+- 4 orange circles = xₜ (current word, 4d = 4 numbers) → [0, 2, 4, 1]
+- Glued together (concatenate):
+[hₜ₋₁, xₜ] = [1, 2, 4, 0, 2, 4, 1]     ← 7 numbers in one row → shape (1×7)
+"1×7" just means 1 row, 7 numbers.
+
+t = 2 means this is happening at time step 2 (the 2nd word).
+
+Top row: 3 circles = 3 neurons
+
+- The yellow box has 3 neurons. Each one has a little b (bias) going into it.
+- Why 3? Because the belt Cₜ₋₁ has 3 numbers. We need one keep/forget dial for each slot on the belt, so 3 neurons
+
+The lines = weights
+
+- Every input circle is connected to every neuron.
+- Each line is one weight (one number the model learns).
+- Count them: 7 inputs × 3 neurons = 21 lines → your note "(7×3) weights".
+
+
+σ around the box = sigmoid
+
+After each neuron calculates its number, sigmoid squeezes it to between 0 and 1, which is your pink note [0 – 1].
+
+Output: fₜ
+
+fₜ = [ _ , _ , _ ]     ← 3 numbers, shape (1×3), each between 0 and 1
+
+
+Part 2: The shape rule (1×7) × (7×3) = (1×3)
+
+Your note:
+(1×7) × (7×3)  →  (1×3)
+   └──┬──┘
+   these must match (the yellow bracket you drew)
+
+
+Part 3: What ONE neuron calculates (very slowly)
+
+
+It's the same multiply-pairs-then-add we did for SimpleRNN.
+
+Input (7 numbers): [1, 2, 4, 0, 2, 4, 1]
+
+Suppose neuron 1 has these 7 weights (made-up, easy numbers):
+[0, 1, 0, 0, 0, 0, -1]
+
+Multiply each pair:
+
+┌──────────┬───────┬────────┬──────────┬────────┐
+│ Position │ Input │ Weight │ Multiply │ Result │
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 1        │ 1     │ 0      │ 1 × 0    │ 0      │
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 2        │ 2     │ 1      │ 2 × 1    │ 2      │
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 3        │ 4     │ 0      │ 4 × 0    │ 0      │
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 4        │ 0     │ 0      │ 0 × 0    │ 0      │
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 5        │ 2     │ 0      │ 2 × 0    │ 0
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 6        │ 4     │ 0      │ 4 × 0    │ 0
+├──────────┼───────┼────────┼──────────┼────────┤
+│ 7        │ 1     │ -1     │ 1 × -1   │ -1
+└──────────┴───────┴────────┴──────────┴────────┘
+
+Add them: 0 + 2 + 0 + 0 + 0 + 0 + (-1) = 1
+Add the bias (say b = 1): 1 + 1 = 2
+Apply sigmoid: σ(2) ≈ 0.88
+
+So neuron 1 says 0.88.
+
+Neurons 2 and 3 do the same thing with their own 7 weights. Say they give 0.12 and 0.50. Then:
+fₜ = [0.88, 0.12, 0.50]
+
+Weights in the forget gate:  21 weights + 3 biases = 24 numbers to learn.
+
+
+
+from my hand written notes....
+
+The 7×3 table in your notebook is W_f, the forget gate's weights.
+
+Matching each piece of your page to the formula:
+
+fₜ = σ(  W_f   ·  [hₜ₋₁, xₜ]   +   b_f  )
+          ↑           ↑              ↑
+     7×3 table   [1 0 1 0 1 1 0]   [b1, b2, b3]
+     (weights)   (1×7, glued input)  (3 biases)
+
+┌──────────────────────────┬───────────────────────────────────────────────────────────────────┐
+│     In your notebook     │                          In the formula                           │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ [1 0 1 0 1 1 0] (1×7)    │ [hₜ₋₁, xₜ], the glued input (3 numbers of hₜ₋₁ + 4 numbers of xₜ) │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ the 7×3 table            │ W_f                                                               │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ each column of the table │ the 7 weights of one neuron (3 columns = 3 neurons)               │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ [2, 2, 1]                │ W_f · [hₜ₋₁, xₜ], the result before the bias                      │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ + bias                   │ + b_f, a list of 3 numbers                                        │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────┤
+│ apply σ                  │ gives fₜ, 3 numbers between 0 and 1                               │
+└──────────────────────────┴───────────────────────────────────────────────────────────────────┘
+
+
+
+1. Look at what your answer [2, 2, 1] actually is
+
+Each number in it came from a different neuron (a different column of your 7×3 grid):
+
+[ 2,        2,        1      ]
+  ↑         ↑         ↑
+neuron 1  neuron 2  neuron 3
+(column 1) (column 2) (column 3)
+
+These are 3 separate calculations that happen to be written side by side.
+
+Every neuron does its own full recipe:
+neuron's answer = (inputs × its own weights) + ITS OWN bias
+Since there are 3 neurons, there are 3 biases:
+
+[ 2,  2,  1 ]   ← multiply-and-add results (from the weights)
++
+[ b1, b2, b3 ]  ← 3 biases, one per neuron
+
+So the b_f in fₜ = σ(W_f · [hₜ₋₁, xₜ] + b_f) is a list: b_f = [b1, b2, b3]. It's always the same length as the output (3), 
+and you add it position by position, like the ⊕ example in your PDF ([1,2,3] + [4,5,6] = [5,7,9]).
+
+
+
+Continuation of the class PDF notes..........
+
+
+Part 4: Using fₜ on the belt, with 3 examples
+
+Your page uses a belt with:
+Cₜ₋₁ = [6, 8, 9]       ← long-term memory (3 slots)
+and multiplies it pointwise (⊗, position by position) with fₜ.
+
+Example ①: fₜ = [0, 0, 0] → forget everything
+
+Cₜ₋₁    = [ 6,    8,    9  ]
+fₜ      = [ 0,    0,    0  ]
+result  = [6×0,  8×0,  9×0 ] = [0, 0, 0]
+Your notes: "Complete sentence context changed" → "Removing all the previous context."
+
+When does this happen? When the topic completely changes:
+
+▎ "Rohan loves cricket and plays every Sunday. The stock market fell today …"
+
+Nothing about Rohan or cricket helps anymore, so wipe the belt clean.
+
+
+Example ②: fₜ = [1, 1, 1] → keep everything
+
+Cₜ₋₁    = [ 6,    8,    9  ]
+fₜ      = [ 1,    1,    1  ]
+result  = [6×1,  8×1,  9×1 ] = [6, 8, 9]
+Nothing changed, so all old memory is kept (anything × 1 = itself).
+
+When does this happen? When the sentence is still on the same topic:
+
+▎ "I grew up in India … my family still lives there … I speak fluent ___"
+
+"India" must stay on the belt until the blank.
+
+
+Example ③: fₜ = [0.5, 1, 0.5] → keep some, forget some
+
+Cₜ₋₁    = [ 6,     8,    9    ]
+fₜ      = [ 0.5,   1,    0.5  ]
+result  = [6×0.5, 8×1,  9×0.5 ] = [3, 8, 4.5]
+(× 0.5 just means cut in half: half of 6 is 3, half of 9 is 4.5.)
+
+- Slot 1: half forgotten (6 → 3)
+- Slot 2: fully kept (8 → 8)
+- Slot 3: half forgotten (9 → 4.5)
+
+You underlined 6 and 9 on the page because those are the slots that got reduced.
+
+When does this happen? Part of the context changes:
+
+▎ "Rohan went to Delhi. Priya also went there …"
+
+The place (Delhi) stays important, but the person changes from Rohan to Priya, so the "person" slot fades.
+
+
+Part 5: Conclusion (from your notes)
+
+▎ "Based on the context → Forget gate will let go some information or will not let go some info {Forgetting}."
+
+In simple words:
+- The forget gate looks at the current word (xₜ) and the recent memory (hₜ₋₁).
+- From those, it decides for each slot on the belt:
+  - 0 → let it go (forget)
+  - 1 → keep it
+  - in between → keep part of it
+- It learns how to decide this during training (the 21 weights + 3 biases get adjusted by fit).
+
+
+
+
+
+This PDF has 2 pages, and it continues straight on from the forget gate:
+
+- Page 1: ② Input Gate and Candidate Memory, the "adding info" part
+- Page 2: the full memory-update formula, which puts forgetting and adding together
+
+
+📄 Page 1: ② Input Gate and Candidate Memory
+
+📄 Page 1: ② Input Gate and Candidate Memory
+
+The big idea first
+
+Last class, the forget gate took bags off the conveyor belt (⊗, removing context).
+This class is about putting new bags on the belt (⊕, adding context). Your note under the picture says exactly that: "Adding Info".
+
+Adding info needs two helpers working as a team:
+
+┌────────────────┬──────────────┬────────────┬──────────────────────────────────────────────────────────────────┐
+│     Helper     │    Symbol    │    Uses    │                      Its job (simple words)                      │
+├────────────────┼──────────────┼────────────┼──────────────────────────────────────────────────────────────────┤
+│ Candidate      │ C̃ₜ ("C       │ tanh       │ What new information could go on the belt? (the new bags waiting │
+│ memory         │ tilde")      │            │  on the side)                                                    │
+├────────────────┼──────────────┼────────────┼──────────────────────────────────────────────────────────────────┤
+│ Input gate     │ iₜ           │ σ          │ How much of each new bag should actually go on? (the person      │
+│                │              │ (sigmoid)  │ deciding)                                                        │
+└────────────────┴──────────────┴────────────┴──────────────────────────────────────────────────────────────────┘
+
+
+Airport picture: the candidate memory is a pile of new bags waiting next to the belt, and the input gate is the person who decides which of those bags get placed on the belt, and how much of each.
+
+---
+
+The picture (top-left)
+
+In the green LSTM box, two small boxes are highlighted:
+- σ with Wᵢ underneath = the input gate
+- tanh with W_c underneath = the candidate memory
+- Both feed into the red ⊗ (multiply), and the result goes up to Cₜ (boxed in orange) = the new belt.
+
+In the big diagram on the top right, your orange marks show the same path:
+Input gate (Iₜ) and Candidate memory (C̃ₜ) → ⊗ → ⊕ (boxed) on the belt → Cₜ (boxed) comes out.
+
+---
+
+The two formulas
+
+iₜ  = σ   ( Wᵢ · [hₜ₋₁, xₜ] + bᵢ )      ← input gate
+C̃ₜ = tanh( W_c · [hₜ₋₁, xₜ] + b_c )     ← candidate memory
+
+
+Look how similar they are to the forget gate:
+fₜ  = σ   ( W_f · [hₜ₋₁, xₜ] + b_f )    ← forget gate (last class)
+
+All three have the same shape. The only differences are:
+1. Each has its own weights (W_f, Wᵢ, W_c) and its own biases (b_f, bᵢ, b_c). The orange box you drew around b_c marks the candidate's own bias.
+2. Which squeezer sits at the end:
+   - forget gate and input gate → σ → numbers between 0 and 1 (dials or volume knobs)
+   - candidate → tanh → numbers between -1 and 1 (the actual new information)
+
+The orange underlines in your notes mark the part they all share: W · [hₜ₋₁, xₜ] + b.
+
+---
+
+The two hand-drawn networks (bottom of page 1)
+
+Left network (white/orange) = Input gate
+
+              ○ → Iₜ           (σ on top)
+ b →  [  ○      ○      ○  ]    ← 3 neurons, each with its own bias b
+        ╲ ╲ ╲ ╲ ╲ ╲   Wᵢ       ← lines = weights Wᵢ
+ hₜ₋₁ ← ○ ○ ○   ○ ○ ○ ○
+        └ 3 ┘   └─ 4 ─┘ → xₜ
+
+
+Right network (yellow) = Candidate memory
+
+              tanh → C̃ₜ        (1×3)
+ b →  [  ○      ○      ○  ]    ← 3 neurons, each with its own bias
+       ╱╲╱╲╱╲╱╲╱╲╱╲            ← (7×3) weights W_c
+       ○ ○ ○  ○ ○ ○ ○           (1×7)
+
+Both networks are exactly like the forget gate network from last class:
+- Input: [hₜ₋₁, xₜ] glued together = 3 + 4 = 7 numbers → (1×7)
+- Weights: (7×3), one column per neuron
+- Neurons: 3, because the belt has 3 slots
+- Biases: 3, one per neuron (the b → arrow)
+- Output: (1×3), 3 numbers
+
+(1×7) × (7×3) = (1×3), the same shape rule as before.
+
+Weight count:
+input gate      : 7×3 = 21 weights + 3 biases = 24
+candidate memory: 7×3 = 21 weights + 3 biases = 24
+
+
+The numbers in your notes
+
+Your page has:
+Iₜ = [2, 4, 6]   ⊗   C̃ₜ = [0, 2, 0]   ⇒   [0, 8, 0]
+⊗ means pointwise multiply: pair up the same positions and multiply them.
+
+┌──────────┬────────────┬─────────────┬──────────┬────────┐
+│ Position │ First list │ Second list │ Multiply │ Result │
+├──────────┼────────────┼─────────────┼──────────┼────────┤
+│ 1        │ 2          │ 0           │ 2 × 0    │ 0      │
+├──────────┼────────────┼─────────────┼──────────┼────────┤
+│ 2        │ 4 (boxed)  │ 2           │ 4 × 2    │ 8      │
+├──────────┼────────────┼─────────────┼──────────┼────────┤
+│ 3        │ 6          │ 0           │ 6 × 0    │ 0      │
+└──────────┴────────────┴─────────────┴──────────┴────────┘
+
+Result = [0, 8, 0]   ← this is what gets ADDED to the belt
+
+What it means:
+- Slot 1: × 0 → nothing added
+- Slot 2: 8 added. This is the one piece of new information worth remembering (that's why you boxed the 4).
+- Slot 3: × 0 → nothing added
+
+
+So out of all the new information, only slot 2 actually goes on the belt. The input gate filtered it.
+
+⚠️ Small note about these numbers: they're simplified to make the multiplication easy. In a real LSTM:
+- iₜ comes out of σ, so every value is between 0 and 1 (like [0, 1, 0])
+- C̃ₜ comes out of tanh, so every value is between -1 and 1 (like [0.3, 0.8, -0.5])
+
+Numbers like 2, 4 and 6 can't actually come out of these squeezers. The idea is still exactly right: the gate (0 to 1) multiplies the candidate and decides how much of it gets through.
+
+---
+
+"Context" note (bottom of page 1)
+
+▎ "Context = If any information needed to be added in the memory, Cₜ₋₁ → the information will be added."
+
+In simple words: when the current word brings something new and important, the input gate opens (values close to 1) and that information is added onto the belt (Cₜ₋₁ becomes Cₜ). When the word is unimportant (like "the" or "a"), the gate stays closed (close to 0) and nothing is added.
+
+
+📄 Page 2: Putting it all together, the memory update
+
+The most important formula of LSTM
+
+Cₜ = fₜ * Cₜ₋₁   +   iₜ * C̃ₜ
+     └───┬───┘       └──┬──┘
+   Removing or      Candidate
+   Forgetting       memory
+   some info        (adding info)
+(Your notes write these labels under the two halves.)
+
+Here * means pointwise multiply (same as ⊗).
+
+Read it like a sentence:
+
+▎ new belt = (old belt after forgetting) + (filtered new info)
+
+
+┌───────────┬─────────────────────────────────────┬───────────────────────────────────────────────────┐
+│   Piece   │             Comes from              │                      Meaning                      │
+├───────────┼─────────────────────────────────────┼───────────────────────────────────────────────────┤
+│ fₜ * Cₜ₋₁ │ forget gate (last class)            │ old memory, with some parts removed               │
+├───────────┼─────────────────────────────────────┼───────────────────────────────────────────────────┤
+│ iₜ * C̃ₜ   │ input gate × candidate (this class) │ new memory, only the useful parts                 │
+├───────────┼─────────────────────────────────────┼───────────────────────────────────────────────────┤
+│ +         │ the ⊕ on the belt                   │ combine them                                      │
+├───────────┼─────────────────────────────────────┼───────────────────────────────────────────────────┤
+│ Cₜ        │ result                              │ the new long-term memory, passed to the next word │
+└───────────┴─────────────────────────────────────┴───────────────────────────────────────────────────┘
+
+Your notes on the right say the same thing:
+Forget Gate
+   +
+I/p Gate ⊗ Candidate memory
+Cₜ₋₁ ⇒ Cₜ
+
+The picture (page 2, left)
+
+The red arrow goes over the top from Cₜ₋₁ to Cₜ, along the belt:
+1. First ⊗, where the forget gate fₜ comes up from below (removing)
+2. Then ⊕, where iₜ ⊗ C̃ₜ comes up from below (adding)
+3. Out comes Cₜ (boxed)
+
+
+Full worked example (using numbers from all your PDFs)
+
+Take the belt and forget gate from last class, and the new info from this class:
+Cₜ₋₁       = [6,   8,   9  ]    ← old belt
+fₜ         = [0.5, 1,   0.5]    ← forget gate (example ③ from last class)
+iₜ * C̃ₜ   = [0,   8,   0  ]    ← new info (this class)
+
+Step 1: forget (⊗)
+fₜ * Cₜ₋₁ = [6×0.5, 8×1, 9×0.5] = [3, 8, 4.5]
+
+Step 2: add (⊕), position by position:
+[3,    8,    4.5]
++
+[0,    8,    0  ]
+=
+[3+0,  8+8,  4.5+0] = [3, 16, 4.5]
+
+New belt: Cₜ = [3, 16, 4.5]
+- Slot 1: half forgotten, nothing new → 3
+- Slot 2: kept fully and new info added → 16 (much stronger now)
+- Slot 3: half forgotten, nothing new → 4.5
+
+
+The India example (page 2)
+
+▎ "I stay in India …………… and I speak ___"
+▎ Options: English or Hindi
+
+How the LSTM handles this, step by step:
+
+1. At the word "India":
+   - candidate memory C̃ₜ creates the info "the country is India"
+   - the input gate sees it's important and opens, so it gets added to the belt
+2. During the many words in between (……):
+   - the forget gate keeps that slot close to 1, so "India" stays on the belt
+   - unimportant words get input gate ≈ 0, so nothing junk is added
+3. At "I speak ___":
+   - the belt still holds "India", so the model can pick Hindi over English ✅
+
+That's exactly the long-term dependency a plain RNN failed at (first PDF). LSTM solves it with forget + input + candidate working together.
+
+
+Why two separate helpers instead of one?
+
+- tanh (candidate) gives values from -1 to 1, so it can push memory up or down. It carries the content.
+- σ (input gate) gives values from 0 to 1, so it works as a volume knob. It carries the decision.
+
+Splitting "what is the info" from "should I add it" lets the LSTM prepare new info every time but add it only when it matters.
+
+---
+
+Weight count so far (for your example sizes)
+
+forget gate      : 21 + 3 = 24
+input gate       : 21 + 3 = 24
+candidate memory : 21 + 3 = 24
+                   ----------
+so far           :          72   (the output gate, coming next, adds 24 more)
+
+
+
+Part 1: ③ Output Gate
+
+The big idea first
+
+So far the LSTM has updated its long-term memory (the belt, Cₜ):
+- forget gate → removed old info
+- input gate + candidate → added new info
+
+The question now is: what should the LSTM show or pass on at this step? That's the job of the output gate.
+
+The picture (top-left)
+
+- The highlighted σ box, with W_o and b_o underneath, is the output gate. Your arrow points to it and says "Neural Network": it's another tiny Dense layer, just like the other gates.
+- Cₜ (boxed) → "Memory Cell": the new belt from last class.
+- Cₜ goes down through tanh, then into ⊗, where it gets multiplied by oₜ.
+- What comes out is hₜ, going right (to the next word) and up (as the output).
+
+
+The two formulas
+
+oₜ = σ( W_o · [hₜ₋₁, xₜ] + b_o )      ← output gate (the dial)
+hₜ = oₜ * tanh(Cₜ)                     ← new short-term memory
+
+
+Formula 1: oₜ, the output gate
+
+It has exactly the same shape as the other gates:
+
+┌───────────┬───────────────────────────────────┬──────────┐
+│   Gate    │              Formula              │ Squeezer │
+├───────────┼───────────────────────────────────┼──────────┤
+│ Forget    │ fₜ = σ(W_f · [hₜ₋₁, xₜ] + b_f)    │ σ        │
+├───────────┼───────────────────────────────────┼──────────┤
+│ Input     │ iₜ = σ(Wᵢ · [hₜ₋₁, xₜ] + bᵢ)      │ σ        │
+├───────────┼───────────────────────────────────┼──────────┤
+│ Candidate │ C̃ₜ = tanh(W_c · [hₜ₋₁, xₜ] + b_c) │ tanh     │
+├───────────┼───────────────────────────────────┼──────────┤
+│ Output    │ oₜ = σ(W_o · [hₜ₋₁, xₜ] + b_o)    │ σ        │
+└───────────┴───────────────────────────────────┴──────────┘
+
+- The same glued input [hₜ₋₁, xₜ] (7 numbers in your example)
+- Its own weights W_o (7×3) and its own biases b_o (3)
+- σ → every value is between 0 and 1 → a dial for each slot
+  - 1 = "show this slot fully"
+  - 0 = "hide this slot"
+
+
+Formula 2: hₜ = oₜ * tanh(Cₜ)
+
+Two small steps:
+
+Step A: tanh(Cₜ), squeeze the belt
+The belt numbers can get big (last class we got 16). Before showing them, tanh squeezes each one to between -1 and 1, so the short-term memory stays small and safe.
+
+⚠️ Note: this tanh has no weights. It's just the squeezer (a pointwise operation, the pink circle in the legend). It is not a neural network layer.
+
+
+Step B: oₜ * …, apply the dial
+Pointwise multiply. Each slot is shown fully, partly, or not at all.
+
+
+Worked example (continuing from last class)
+
+Last class we ended with:
+Cₜ = [3, 16, 4.5]        ← new belt
+
+Step A: squeeze with tanh
+tanh(3)   ≈ 0.995
+tanh(16)  ≈ 1.000
+tanh(4.5) ≈ 1.000
+
+tanh(Cₜ) ≈ [0.995, 1.0, 1.0]
+(Big numbers all get squeezed to almost 1, so nothing can blow up.)
+
+Step B: the output gate decides (made-up values):
+oₜ = [1, 0, 0.5]
+
+
+Multiply position by position:
+
+┌──────┬──────────┬─────┬───────────┬─────────────────────┐
+│ Slot │ tanh(Cₜ) │ oₜ  │ Multiply  │         hₜ          │
+├──────┼──────────┼─────┼───────────┼─────────────────────┤
+│ 1    │ 0.995    │ 1   │ 0.995 × 1 │ 0.995 (shown fully) │
+├──────┼──────────┼─────┼───────────┼─────────────────────┤
+│ 2    │ 1.0      │ 0   │ 1.0 × 0   │ 0 (hidden)          │
+├──────┼──────────┼─────┼───────────┼─────────────────────┤
+│ 3    │ 1.0      │ 0.5 │ 1.0 × 0.5 │ 0.5 (half shown)    │
+└──────┴──────────┴─────┴───────────┴─────────────────────┘
+
+hₜ = [0.995, 0, 0.5]     ← new short-term memory
+
+Important: slot 2 is hidden from hₜ, but it is still on the belt (Cₜ still has 16 there). The output gate only decides what to show now. It doesn't delete anything. That info can be shown later, when it's needed.
+
+
+Real-life example:
+
+▎ "I grew up in India … I love cricket … I speak fluent ___"
+
+- At "cricket", the "India" slot is still on the belt, but the output gate may hide it (not needed right now).
+- At "I speak fluent", the output gate opens the "India" slot so the model can predict Hindi.
+
+
+Part 4: Training, updating the weights
+
+
+Small addition: your note lists Wᵢ, W_c and W_o, but W_f (the forget gate weights) gets updated too, along with all 4 biases (b_f, bᵢ, b_c, b_o). The full list:
+[W_f, Wᵢ, W_c, W_o]  +  [b_f, bᵢ, b_c, b_o]   ← all updated by back propagation
+
+
+Counting the weights (your example sizes)
+
+Each gate = a tiny Dense layer: (7 × 3) weights + 3 biases = 24.
+forget gate      : 24
+input gate       : 24
+candidate memory : 24
+output gate      : 24
+                   ---
+total LSTM       : 96   = 4 × 24
+An LSTM has 4 times the weights of a SimpleRNN of the same size, because it has 4 little networks inside instead of 1.
+
+General formula:
+LSTM weights = 4 × ( units × (embedding_dim + units) + units )
+With the earlier model (Embedding(output_dim=10), units=12):
+SimpleRNN(12): (10 + 12 + 1) × 12      = 276
+LSTM(12)     : 4 × 276                 = 1,104
+
+
+
+
+
+
+
+
+
+
